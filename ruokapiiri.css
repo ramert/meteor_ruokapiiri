@@ -1,0 +1,183 @@
+/* CSS declarations go here */
+.nav {
+    list-style: none outside none;
+    margin-bottom: 0;
+    margin-left: 0;
+}
+
+.tab-content {
+    overflow: auto;
+    padding-top: 20px;
+    height: 100%;
+    background: white;
+}
+.tabbable {
+	height: 100%;
+}
+
+.left_navigation {
+	margin-left: 20px;
+	width: 20%;
+	height: 45%;
+}
+div.main {
+	margin-left: 20px;
+}
+ul.unstyled {
+	list-style-type: none;
+	margin: 0 0 10px 0;
+}
+
+ul.clickable {
+	cursor: pointer;
+}
+
+li.producer_list_element, li.category_list_element, li.product_list_element, li.order_list_element, li.orderer-list-element {
+	padding: 3px 3px 3px 10px;
+	margin: 2px 2px 2px 0;
+}
+
+li.selected {
+	background-color: #59595C;
+	color: white;
+	border-radius: 4px;
+}
+li.sign-in {
+	margin-right: 160px;
+	padding-top: 8px;
+	padding-bottom: 8px;
+	line-height: 20px;
+	
+}
+a.login-link-text {
+	text-decoration: none !important;
+}
+
+a.login-close-text {
+	text-decoration: none !important;
+}
+div.span10 {
+	margin-right: 10px;
+}
+div.span2 {
+	margin-left: 0px;
+}
+
+.modal {
+  //background-color: #f00;                                                                               
+  max-width: 50%;                                                                                         
+  max-height: 50%;                                                                                        
+  //position: relative;                                                                                   
+}
+
+div.full {
+	width: 100%;
+	height: 35px;
+}
+
+button.add_basket {
+	float: right;
+}
+
+button.category-expand {
+	width: 100%;
+	text-align: left;
+}
+
+div.product-list {
+	margin: 2px;
+	padding-top: 5px;
+	padding-left: 10px;
+}
+span.airy_text {
+	line-height: 25px;
+}
+
+div.top-right-corner {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+}
+input.amount {
+	width: 35px;
+	margin-bottom: 0px;
+}
+
+div.shopping-cart {
+	margin-top: 15px;
+}
+
+li.two_tabs {
+	width: 50%;
+}
+
+span.info {
+	float: right;
+	font-size: 0.8em
+}
+span.large {
+	font-size: 1.5em;
+}
+.topPadding {
+	padding-top: 10px !important;
+}
+
+div.roundInfo {
+	margin-bottom: 15px;
+}
+.float-right {
+	float: right;
+}
+.space-right {
+	margin-right: 5px;
+}
+input.datepicker {
+	margin-bottom: 0px !important;
+	width: 90px;
+}
+input.timepicker {
+	margin-bottom: 0px !important;
+	width: 70px;
+}
+li.someProducts {
+	color: #0088CC;
+}
+
+html, body {
+	background-color: #eee;
+	height: 100%;
+}
+.container {
+	width: 300px;
+}
+
+/* The white background content wrapper */
+.container > .content {
+	background-color: #fff;
+	padding: 20px;
+	margin: 20px -20px; 
+	-webkit-border-radius: 10px 10px 10px 10px;
+	-moz-border-radius: 10px 10px 10px 10px;
+	border-radius: 10px 10px 10px 10px;
+	-webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15);
+	-moz-box-shadow: 0 1px 2px rgba(0,0,0,.15);
+	box-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
+
+.login-form {
+	margin-left: 65px;
+}
+.createAccount {
+	float: right;
+	margin-right: 45px;
+}
+.resultLine {
+	border-top: 3px solid #DDDDDD !important;
+}
+
+.span1 {
+	margin-left: 0;
+}
+.span3 {
+	margin-left: 0;
+}

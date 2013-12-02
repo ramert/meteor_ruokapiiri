@@ -1,0 +1,27 @@
+{
+  "meteor": {},
+  "dependencies": {
+    "basePackages": {
+      "bootstrap-datepicker2": {},
+      "bootstrap-timepicker": {},
+      "bootstrap-datetimepicker": {}
+    },
+    "packages": {
+      "bootstrap-datepicker2": {
+        "git": "https://github.com/deepwell/meteor-bootstrap-datepicker.git",
+        "tag": "v1.2.0",
+        "commit": "b7de18a7cc651ea665cda75048663f90d1a11d10"
+      },
+      "bootstrap-timepicker": {
+        "git": "https://github.com/BenjaminRH/meteor-bootstrap-timepicker.git",
+        "tag": "v0.1.0",
+        "commit": "fa61edb82752e5c682dbaafd5412f4d29f8b72e0"
+      },
+      "bootstrap-datetimepicker": {
+        "git": "https://github.com/Elfoslav/bootstrap-datetimepicker.git",
+        "tag": "v0.0.6",
+        "commit": "728e5d603c377652e6909e180358364c46ce95ff"
+      }
+    }
+  }
+}
