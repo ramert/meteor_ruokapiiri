@@ -29,13 +29,15 @@ if (Meteor.isClient) {
     }
   });
 
+  var accuratePrice = 'Tarkka';
+  var inaccuratePrice = 'Ei tarkka';
+
 
 //Initialize jquery ui date picker and time picker
 
   Template.orders.rendered = function() {
     //console.log("Datepicker initialized!");
    $('#datepicker').datepicker( { autoclose: true,weekStart: 1 }).on('changeDate', function(event) {
-    //TODO: bug, when clicking outside calendar the date is shown in wrong format
       var selectedRoundId = Session.get('admin_selected_order_round');
       var endDate = new Date(event.date);
       if (endDate != null) {
@@ -98,7 +100,7 @@ if (Meteor.isClient) {
       for (i in actualProducts) 
       {
         //console.log(actualProducts[i].ProductAmount);
-        totalPrice += (actualProducts[i].ProductAmount*actualProducts[i].ProductPrice);
+        totalPrice += (actualProducts[i].ProductAmount*actualProducts[i].ProductPrice*actualProducts[i].ProductPackageSize);
       }
       roundedNumber = roundToOneDecimal(totalPrice);
 
@@ -111,7 +113,13 @@ if (Meteor.isClient) {
 
   function formatDate (formattedDate) {
       var date = formattedDate.getDate();
+      if (date < 10) {
+        date = '0'+date;
+      }
       var month = formattedDate.getMonth() + 1; //Months are zero based
+      if (month < 10 ) {
+        month = '0'+month;
+      }
       var year = formattedDate.getFullYear();
       return date+"."+month+"."+year; 
 
@@ -126,12 +134,12 @@ if (Meteor.isClient) {
     }
   }*/
 
-  function updateCartForCurrentRound(addedProductId, addedProductName, addedProductPrice, addedProductAmount, increment)
+  function updateCartForCurrentRound(addedProductId, addedProductName, addedProductPrice, addedProductPriceIsAccurate, addedPackageSize, addedProductUnit, addedProductAmount, increment)
   {
     var currentRoundId = Session.get('user_selected_order_round');
     var currentUser = Meteor.userId();
     console.log(currentRoundId+" and: "+currentUser);
-    Meteor.call('updateCart', currentRoundId, currentUser, addedProductId, addedProductName, addedProductPrice, addedProductAmount, increment);
+    Meteor.call('updateCart', currentRoundId, currentUser, addedProductId, addedProductName, addedProductPrice, addedProductPriceIsAccurate, addedPackageSize, addedProductUnit, addedProductAmount, increment);
   }
 
 
@@ -181,32 +189,39 @@ if (Meteor.isClient) {
 
   Template.product.selectedUnit = function() {
     var selected_product = Products.findOne({_id: Session.get('current_product')}, {});
-    //console.log(selected_product.Unit+", this in context: "+this.Name);
 
     return selected_product.Unit == this.Name ? "selected" : "";
   }
 
   Template.product.prices = function() {
-    return [{Name: 'Tarkka'}];
-    //TODO: add support for inaccurate product price [{Name: 'Tarkka'}, {Name:'Ei tarkka'}];
+    return [{Name: accuratePrice}, {Name: inaccuratePrice }];
   }
+
+  Template.product.selectedPrice = function() {
+    var selected_product = Products.findOne({_id: Session.get('current_product')}, {});
+    var priceIsAccurate = selected_product.PriceIsAccurate;
+    var priceTypeText;
+    if (priceIsAccurate){
+      priceTypeText = accuratePrice;
+    }
+    else {
+      priceTypeText = inaccuratePrice;
+    }
+    var result = priceTypeText == this.Name? "selected" : "";
+    console.log(this.Name+" is "+priceTypeText+ " = "+result);
+    return priceTypeText == this.Name? "selected" : "";
+  }
+
+
   Template.product_list.categories = function() { 
     return Categories.find({}, {sort: {Name: 1} , reactive: false});
   }
 
   Template.product_list.products = function(current_category_id) {
-    //TODO: make this for the order round!
-    //var select_round = Session.get('user_selected_order_round');
-    //var products_for_this_category = OrderRounds.find({_id: select_round, "Products.CategoryId": current_category_id}, {"Products.$": 1});
-    //Products.find()
-    console.log(OrderRounds.find({parent: Session.get('user_selected_order_round'), CategoryId: current_category_id}));
-
     return OrderRounds.find({parent: Session.get('user_selected_order_round'), CategoryId: current_category_id});
-    //return Products.find({category_id: current_category_id}, {sort: {Name: 1}, reactive: false});
   }
 
   Template.product_list.hasProducts = function(current_category_id) {
-    //var products_for_this_category = Products.find({category_id: current_category_id}, {});
     var select_round = Session.get('user_selected_order_round');
     var products_for_this_category = OrderRounds.find({parent: select_round, CategoryId: current_category_id}, {reactive: false});
 
@@ -214,8 +229,41 @@ if (Meteor.isClient) {
   }
 
   Template.product_row.product = function(product_id){
-    //console.log(product_id+ " result: "+Products.findOne( {_id: product_id}));
     return Products.findOne( {_id: product_id});
+  }
+  Template.product_row.multiplePackages = function()
+  {
+    var packages = this.ProductPackages;
+    //console.log(packages);
+    return packages.length > 1 ? '': 'disabled';
+  }
+  Template.product_row.isInaccurate = function() {
+    return this.PriceIsAccurate ? '': '~';
+  }
+
+  Template.product_row.buttonText = function() {
+    //console.log("User:"+Meteor.userId()+", Round: "+Session.get('user_selected_order_round')+", Product "+this._id);
+
+    var product = Orders.findOne({UserId: Meteor.userId(), OrderRoundId: Session.get('user_selected_order_round'), "Products.ProductId": this._id});
+    //console.log(product);
+    if (product == null) {
+       return "Lisää koriin";
+    }
+    else {
+      return "Lisää vielä";
+    }
+  }
+
+  Template.product_row.inCart = function() {
+     var product = Orders.findOne({UserId: Meteor.userId(), OrderRoundId: Session.get('user_selected_order_round'), "Products.ProductId": this._id});
+    
+    if (product == null) {
+      return 'btn-success';
+    }
+    else {
+      return "btn-primary";
+    }
+
   }
 
   Template.users.users = function() {
@@ -230,13 +278,13 @@ if (Meteor.isClient) {
       var myCart = Orders.find({
         UserId: Meteor.userId(),
         OrderRoundId : select_round
-      });
+      }, {sort: {"Products.ProductName": 1}});
       return  myCart;
     }
   }
 
   Template.shopping_cart_rows.count = function() {
-    var total = roundToOneDecimal(this.ProductPrice*this.ProductAmount);
+    var total = roundToOneDecimal(this.ProductPrice*this.ProductAmount*this.ProductPackageSize);
 
     return total;
   }
@@ -270,17 +318,16 @@ if (Meteor.isClient) {
         if (deadline != null) {
           //TODO make time work
           var time = '18:00'
-          return "Tilauskierros sulkeutuu "+formatDate(deadline)+ " Kello: "+ time;
+          return "Kierros sulkeutuu "+formatDate(deadline)+ " Kello: "+ time;
         }
         else {
-          return "Tilauskierroksella ei ole määräaikaa"; 
+          return "Kierroksella ei ole määräaikaa"; 
         }
     }
   }
 
   Template.user_shopping_cart.product_count = function() {
     var currentUser = Meteor.userId();
-    //TODO: bear in mind that there might be no open round
     var currentRoundId = Session.get('user_selected_order_round');
     var shoppingCart = Orders.findOne({
       UserId: currentUser,
@@ -309,7 +356,6 @@ if (Meteor.isClient) {
   }
 
   Template.user_shopping_cart.products_price = function() {
-    //TODO: bear in mind that there might be no open round
     return getShoppingCartsTotal(Meteor.userId(), Session.get('user_selected_order_round'));
   }
 
@@ -317,13 +363,166 @@ if (Meteor.isClient) {
     return getShoppingCartsTotal(Meteor.userId(), Session.get('user_selected_order_round'));
   }
 
+  Template.orders_by_producer.producers = function() {
+    //TODO: filter producers that do not have orders through Orders.
+    return Producers.find({});
+  }
+
+  Template.orders_by_producer.selected = function() {
+    return Session.equals('rounds_products_for_producer', this._id) ? 'selected' : '';
+  }
+  Template.orders_by_producer.productName = function(selectedProductId) {
+    console.log(selectedProductId);
+    var actualProduct = Products.findOne({_id: selectedProductId});
+    if (actualProduct != null) {
+      return actualProduct.Name;
+    }
+    else 
+    {
+      console.log("No more product like this");
+    }
+  }
+
+  Template.orders_by_producer.productName = function(selectedProductId) {
+    //console.log(selectedProductId);
+    var actualProduct = Products.findOne({_id: selectedProductId});
+    if (actualProduct != null) {
+      return actualProduct.Name;
+    }
+    else 
+    {
+      console.log("No more product like this");
+    }
+  }
+
+  Template.orders_by_producer.amount = function(selectProductId) {
+    //TODO refactor this and below to have only one method
+    var selectPackageSize = this.Amount;
+    var amount = 0;
+    //var selectProductId = this.ProductId;
+    var currentRoundId = Session.get('admin_selected_order_round');
+    //This does not work currently
+    var shoppingCartWithProduct = Orders.find({OrderRoundId: currentRoundId}, { Products: { $elemMatch: {ProductId: selectProductId}}});
+    //console.log(shoppingCartWithProduct);
+    shoppingCartWithProduct.forEach(function(cart) {
+      //console.log("Cart: "+cart);
+      var products = cart.Products;
+      products.forEach(function(product){
+        //console.log("Comparing: "+product.ProductId+",  to "+selectProductId);
+        //var result = (product.ProductId == this.ProductId);
+        //There is a bug in Meteor mongodb mini, it 
+        //console.log(product.ProductPackageSize+" ? "+amount)
+        if (product.ProductId == selectProductId && product.ProductPackageSize == selectPackageSize) {
+          amount = amount+product.ProductAmount;
+        }
+        else {
+          //TODO: what for new release with the bug fixed with $elemMatch funct
+          //console.log("So got also something that should not be");
+        }
+      }); 
+    });
+    return amount;
+  }
+
+  Template.orders_by_producer.total = function(selectProductId) {
+    var selectPackageSize = this.Amount;
+    var total = 0;
+    var currentRoundId = Session.get('admin_selected_order_round');
+    //TODO: elemmatch is not supported by Meteor mongodb mini, so if hack in the loop
+    var shoppingCartWithProduct = Orders.find({OrderRoundId: currentRoundId}, { Products: { $elemMatch: {ProductId: selectProductId}}});
+    shoppingCartWithProduct.forEach(function(cart) {
+      //console.log("Cart: "+cart);
+      var products = cart.Products;
+      products.forEach(function(product){
+        if (product.ProductId == selectProductId && product.ProductPackageSize == selectPackageSize) {
+          total = total+(product.ProductAmount*product.ProductPrice*product.ProductPackageSize);
+        }
+        else {
+          //TODO: what for new release with the bug fixed with $elemMatch funct
+          //console.log("So got also something that should not be");
+        }
+      }); 
+    });
+    return roundToOneDecimal(total);
+  }
+
+  Template.orders_by_producer.unit = function(selectProductId) {
+    var unit;
+    var currentRoundId = Session.get('admin_selected_order_round');
+    var shoppingCartWithProduct = Orders.find({OrderRoundId: currentRoundId}, { Products: { $elemMatch: {ProductId: selectProductId}}});
+    shoppingCartWithProduct.forEach(function(cart) {
+      var products = cart.Products;
+      products.forEach(function(product){
+        if (product.ProductId == selectProductId) {
+          unit = product.ProductUnit;
+        }
+        else {
+          //TODO: what for new release with the bug fixed with $elemMatch funct
+          //console.log("So got also something that should not be");
+        }
+      }); 
+    });
+    return unit;
+  }
+
+  Template.orders_by_producer.price = function(selectProductId) {
+    var price;
+    var currentRoundId = Session.get('admin_selected_order_round');
+    var shoppingCartWithProduct = Orders.find({OrderRoundId: currentRoundId}, { Products: { $elemMatch: {ProductId: selectProductId}}});
+    shoppingCartWithProduct.forEach(function(cart) {
+      //console.log("Cart: "+cart);
+      var products = cart.Products;
+      products.forEach(function(product){
+        if (product.ProductId == selectProductId) {
+          price = product.ProductPrice;
+        }
+        else {
+          //TODO: what for new release with the bug fixed with $elemMatch funct
+          //console.log("So got also something that should not be");
+        }
+      }); 
+    });
+    return price;
+  }
+
+
+
+  Template.orders_by_producer.products = function() {
+    var producerId = Session.get('rounds_products_for_producer');
+    var currentRoundId = Session.get('admin_selected_order_round');
+    if (producerId != null && currentRoundId != null) {
+      return OrderRounds.find({parent: currentRoundId, ProducerId: producerId});
+    }
+  }
+
+  Template.orders_by_producer.products_price = function() {
+    var producerId = Session.get('rounds_products_for_producer');
+    var currentRoundId = Session.get('admin_selected_order_round');
+    var price = 0;
+    if (producerId != null && currentRoundId != null) {
+      var productsForProducer = OrderRounds.find({parent: currentRoundId, ProducerId: producerId});
+      productsForProducer.forEach(function(product) {
+        //console.log(product.ProductId);
+        var shoppingCartWithProduct = Orders.find({OrderRoundId: currentRoundId}, { Products: { $elemMatch: {ProductId: product.ProductId}}});
+        shoppingCartWithProduct.forEach(function(cart) {
+          //console.log("Cart: "+cart);
+          var userProducts = cart.Products;
+          userProducts.forEach(function(userProduct){
+            if (product.ProductId == userProduct.ProductId) {
+              //console.log("Product: "+userProduct.ProductName+", #"+userProduct.ProductAmount+", Price: "+userProduct.ProductPrice)
+              price = price+(userProduct.ProductAmount*userProduct.ProductPrice*userProduct.ProductPackageSize);
+            }
+          }); 
+        });
+      });
+    }
+    return roundToOneDecimal(price);
+  }
+
   Template.orders_by_orderer.shopping_carts = function() {
-    //TODO: change to handle multiple rounds...
-    var currentRound = Session.get('admin_selected_order_round');
-    //console.log("Selected round:" +currentRound);
-    if (currentRound != null) {
-      var orders = Orders.find({ OrderRoundId: currentRound});
-      //console.log(orders);
+    var currentRoundId = Session.get('admin_selected_order_round');
+    if (currentRoundId != null) {
+      var orders = Orders.find({ OrderRoundId: currentRoundId});
       return orders;
     }
   } 
@@ -331,7 +530,6 @@ if (Meteor.isClient) {
   Template.orders_by_orderer.user_name = function(userId)
   {
     var theUser = Meteor.users.findOne({_id: userId});
-    //console.log(theUser);
     //TODO: now only returns email, should return name if set
     if (theUser != null) {
       if (theUser.emails != null)
@@ -362,9 +560,9 @@ if (Meteor.isClient) {
  
   Template.users_shopping_cart_rows.count = function() {
     //console.log(this);
-    var total = this.ProductPrice*this.ProductAmount;
+    var total = this.ProductPrice*this.ProductAmount*this.ProductPackageSize;
 
-    return total;
+    return roundToOneDecimal(total);
   }
 
   Template.order_rounds.order_rounds = function() {
@@ -394,6 +592,20 @@ if (Meteor.isClient) {
     return !Session.equals('current_producer_for_round', null);
   }
 
+  Template.products_for_round.productOrCategorySelected = function() {
+    if (!Session.equals('current_producer_for_round', null)) {
+      return true;
+    }
+    else {
+      if (!Session.equals('current_category_for_round', null)) {
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+  }
+
   Template.products_for_round.productChildrenSelected = function() {
     var roundProductsForProducer = OrderRounds.find({parent: Session.get('admin_selected_order_round'), ProducerId: this._id });
     //console.log(roundProductsForProducer);
@@ -408,12 +620,12 @@ if (Meteor.isClient) {
     //console.log(roundProductsForProducer);
     if (roundProductsForCategory != null) {
       var amountInRound = roundProductsForCategory.count();
-      console.log("Count: "+amountInRound);
+      //console.log("Count: "+amountInRound);
       return amountInRound == 0 ? '':'someProducts';
     }  
   }
 
-    Template.products_for_round.categorySelected = function() {
+  Template.products_for_round.categorySelected = function() {
     return !Session.equals('current_category_for_round', null);
   }
 
@@ -507,6 +719,9 @@ if (Meteor.isClient) {
     //TODO: make it work
     return this.Price;
   }
+  Template.product.totalPrice = function(amount, price) {
+    return amount*price;
+  }
 
   Template.producers.events({
     'click .add_producer' : function () {
@@ -530,8 +745,11 @@ if (Meteor.isClient) {
     },
     'click .add_product': function() {
       //TODO: Fix hack solution with .toString. What is the object id with attribute?
-        Products.insert({Name : "Uusi tuote", Producer_id: Session.get('current_producer'), ProductPriceType: 'Tarkka', ProductPackages: [ '1' ]}, 
-          function(err, newItem) {Session.set('current_product', newItem.toString());}
+        Products.insert({Name : "Uusi tuote", Producer_id: Session.get('current_producer'), PriceIsAccurate: true, ProductPackages: [ ]}, 
+          function(err, newItem) {
+            Products.update(newItem.toString(), {$push: {ProductPackages: {ParentId: newItem.toString(), Amount: 1, _id: new Meteor.Collection.ObjectID()}}});
+            Session.set('current_product', newItem.toString());
+          }
         );
     },
     'click .remove_product' : function() {
@@ -552,6 +770,9 @@ if (Meteor.isClient) {
     'blur .product_name':function(event,context) {
         Products.update(this._id, {$set:{Name : event.target.value}});
     },
+    'blur .product_description': function(event, context) {
+        Products.update(this._id, {$set: {Description: event.target.value}});
+    },
     'blur .product_price':function(event, context) {
         Products.update(this._id, {$set: {Price: event.target.value}});
         //TODO: almost duplicate, make generic with html id / type / value type / smthg
@@ -567,23 +788,39 @@ if (Meteor.isClient) {
       var unit = event.target.value;
       Products.update(current_product_id, {$set: {Unit: unit}});
     },
+    'change .price-form-control': function(event, context) {
+      var current_product_id = Session.get('current_product');
+      var priceTypeText = event.target.value;
+      var isAccurate = false;
+      if (priceTypeText == accuratePrice)
+      {
+        isAccurate = true;
+      }
+      console.log("Setting accurate to:"+isAccurate);
+      Products.update(current_product_id, {$set: {PriceIsAccurate: isAccurate}});
+    },
     'click .add_size_unit' : function(event, contect) {
       //var packages = this.ProductPackages;
 
-      Products.update(this._id, {$push: {ProductPackages: 1}});
+      Products.update(this._id, {$push: {ProductPackages: {ParentId: this._id, Amount: 1, _id: new Meteor.Collection.ObjectID()}}});
       console.log("Adding size unit:"+this._id);
     },
     'click .remove_package' : function(event, context) {
-      console.log("Removing size unit: "+context.data._id+" , "+this[0]);
-      Products.update(context.data._id, {$pull: {ProductPackages: this[0]}});
+      //console.log(event.target.parentId);
+      console.log(context.data._id);
+      console.log("Removing size unit: "+this.ParentId+" , "+this._id);
+      Products.update(this.ParentId, {$pull: {ProductPackages: { _id : this._id}}});
+    },
+    'blur .package_size' : function(event, context) {
+      //console.log("Trying to update: "+event.target.value);
+      Meteor.call('updateProductPackageAmount', this.ParentId, this._id, event.target.value);
     }
-
   });
 
   Template.new_category.events({
-    'click .category' : function (event, context) {
-      //TODO: make context right, so that no need for this...
-      Categories.insert({Name : context.find(".new_category_name").value});
+    'click .add_category' : function (event, context) {
+      console.log(context.find('input').value);
+      Categories.insert({Name : context.find("input").value});
     },
   });
 
@@ -594,20 +831,30 @@ if (Meteor.isClient) {
     },
     'click .allow_admin' : function() {
       Meteor.users.update({_id: this._id}, {$set: {role: 'admin'}});
-      //console.log(Meteor.users.findOne({_id: this._id}));
+    },
+    'click .remove_user' : function() {
+      Meteor.call('removeAccount', this._id);
     }
   });
 
   Template.product_row.events({
     'click .add_basket' : function(event, context) {
+        var packageSizeSelect = context.find('select');
+        var addedPackageSize = packageSizeSelect.value;
         var addedProductId = this._id;
         var addedProductName = this.Name;
         var addedProductPrice = this.Price;
+        var addedProductPriceIsAccurate = this.PriceIsAccurate;
+        var addedProductUnit = this.Unit;
         var addedProductAmount = 1;
-        //console.log(addedProductId+", "+addedProductName+", "+addedProductPrice+", "+addedProductAmount, true)
-        //Meteor.call('updateCart', currentRoundId, currentUser, addedProductId, addedProductName, addedProductPrice, amount, true);
 
-        updateCartForCurrentRound(addedProductId, addedProductName, addedProductPrice, addedProductAmount, true);
+        updateCartForCurrentRound(addedProductId, addedProductName, addedProductPrice, addedProductPriceIsAccurate, addedPackageSize, addedProductUnit, addedProductAmount, true);
+        event.preventDefault();
+        return false;
+    },
+    'click .packageSize-form-control' : function(event) {
+      event.preventDefault();
+      return false;
     }
   });
 
@@ -618,23 +865,32 @@ if (Meteor.isClient) {
           var addedProductId = this.ProductId;
           var addedProductName = this.ProductName;
           var addedProductPrice = this.ProductPrice;
-          updateCartForCurrentRound(addedProductId, addedProductName, addedProductPrice, addedProductAmount, false);
+          var addedProductPriceIsAccurate = this.ProductPriceIsAccurate;
+          var addedPackageSize = this.ProductPackageSize;
+          var addedProductUnit = this.ProductUnit;
+          updateCartForCurrentRound(addedProductId, addedProductName, addedProductPrice, addedProductPriceIsAccurate, addedPackageSize, addedProductUnit, addedProductAmount, false);
       }
       //If set to zero or negative, should remove
       else {
-        Meteor.call('removeFromCart', Session.get('user_selected_order_round'), Meteor.userId(), this.ProductId);
+        Meteor.call('removeFromCart', Session.get('user_selected_order_round'), Meteor.userId(), this.ProductId, this.ProductPackageSize);
       }
     },
     'click .remove_product' : function(event, context) {
-      Meteor.call('removeFromCart', Session.get('user_selected_order_round'), Meteor.userId(), this.ProductId);
+      Meteor.call('removeFromCart', Session.get('user_selected_order_round'), Meteor.userId(), this.ProductId, this.ProductPackageSize);
     }
 
   }); 
 
   Template.orders_by_orderer.events({
       'click .orderer-list-element' : function() {
-      //TODO: This is triggered with delete. WHY?!?
       Session.set('rounds_products_for_orderer', this.UserId);
+    }
+  })
+
+  Template.orders_by_producer.events({
+    'click .producer-list-element': function() {
+      //console.log("Click:"+this._id);
+      Session.set('rounds_products_for_producer', this._id);
     }
   })
 
@@ -663,16 +919,25 @@ if (Meteor.isClient) {
       Session.set('current_category_for_round', this._id);
     },
     'change .selectAll' : function(event) {
-      //console.log(event.target.checked);
-      //Set all producers products
-      var producerId = Session.get('current_producer_for_round');
-      productForProducer = Products.find({Producer_id: producerId},{sort: {Name: 1}});
-      productForProducer.forEach(function(product) {
+      //Set all products for producers or category, depending which is selected
+      var products;
+      var currentProducer = Session.get('current_producer_for_round');
+      var currentCategory = Session.get('current_category_for_round');
+
+      if (currentProducer != null){
+        products = Products.find({Producer_id: currentProducer},{sort: {Name: 1}});
+      }
+      else {
+        products = Products.find({category_id: currentCategory},{sort: {Name: 1}});
+      }
+
+      products.forEach(function(product) {
         if (event.target.checked) {
          OrderRounds.insert(
          {
             parent: Session.get('admin_selected_order_round'),
-            ProductId: product._id, 
+            ProductId: product._id,
+            ProductPackages: product.ProductPackages, 
             CategoryId: product.category_id,
             ProducerId: product.Producer_id
          });
@@ -687,15 +952,8 @@ if (Meteor.isClient) {
 
   Template.order_round_product_row.events({
     'change input' : function(event) {
-      //console.log(OrderRounds.find({_id: Session.get('admin_selected_order_round')}));
-
-      //var productInRound = OrderRounds.findOne({_id: Session.get('admin_selected_order_round'), "Products.ProductId": this._id }, {"Products.$": 1})
-      //If checkbox for product select, add to the current order round
-      //console.log("Value now: "+event.target.value);
-
+     //If checkbox for product select, add to the current order round
       if (event.target.checked) {
-        //console.log("Adding: product id: "+this._id);
-        //console.log("Adding: "+this._id + " with "+this.category_id);
         OrderRounds.insert(
           {
             parent: Session.get('admin_selected_order_round'),
@@ -704,33 +962,29 @@ if (Meteor.isClient) {
             ProducerId: this.Producer_id
           }
           );
-        //console.log(OrderRounds.find({}));
       }
       //If unselected should be in the curent round, so remove
       else {
-        //console.log("Removing product id: "+this._id);
         Meteor.call('removeProductFromRound', Session.get('admin_selected_order_round'), this._id);
-        //OrderRounds.remove({_id: , });
       }
     }
   })
 
   Template.open_rounds.events( {
     'click .order_list_element' : function() {
-      //console.log("Setting user selected round: "+this._id);
       Session.set('user_selected_order_round', this._id);
     }
   });
 
   Template.orders.events({
     'click .open_round': function() {
-        var selectedRoundId = Session.get('admin_selected_order_round');
-        OrderRounds.update({_id: selectedRoundId}, {$set: { Open: true}});
-      },
-      'click .close_round': function() {
-        var selectedRoundId = Session.get('admin_selected_order_round');
-        OrderRounds.update({_id: selectedRoundId}, {$set: { Open: false}});
-      }
+      var selectedRoundId = Session.get('admin_selected_order_round');
+      OrderRounds.update({_id: selectedRoundId}, {$set: { Open: true}});
+    },
+    'click .close_round': function() {
+      var selectedRoundId = Session.get('admin_selected_order_round');
+      OrderRounds.update({_id: selectedRoundId}, {$set: { Open: false}});
+    }
   });
 
   Template.logInScreen.events ({
@@ -778,9 +1032,8 @@ if (Meteor.isServer) {
         var options = {email: 'rami.ertimo@gmail.com', password: 'admin'};
         Accounts.createUser(options);
     }
-    //TODO: remove, if need to clean Order rounds...
+    //If need to clean Order rounds...
     //OrderRounds.remove({});
-    //OrderRounds.insert({Name : "testRound 1", Open: true, Products: []});
     //Products.remove({});
     //Orders.remove({});
     //Meteor.users.remove({});
@@ -800,11 +1053,12 @@ if (Meteor.isServer) {
 
     Meteor.publish("orders", function() {
       var user = Meteor.users.findOne(this.userId);
-
       if (user) {
-        return Orders.find({UserId: this.userId})
-        if (user.role === 'admin') {
+        if (user.role == 'admin') {
           return Orders.find({});
+        }
+        else {
+          return Orders.find({UserId: this.userId})
         }
       }
     });
@@ -823,7 +1077,7 @@ if (Meteor.isServer) {
         return true;
       }
     },*/
-    updateCart: function(currentRoundId, currentUser, addedProductId, addedProductName, addedProductPrice, amount, increment) {
+    updateCart: function(currentRoundId, currentUser, addedProductId, addedProductName, addedProductPrice, addedProductPriceIsAccurate, addedPackageSize, addedProductUnit, amount, increment) {
       //console.log("user:  "+currentUser+ ", round: "+currentRoundId);
       var shoppingCart = Orders.findOne({
         UserId: currentUser,
@@ -840,14 +1094,17 @@ if (Meteor.isServer) {
             ProductId: addedProductId,
             ProductName: addedProductName,
             ProductAmount: amount,
-            ProductPrice: addedProductPrice
+            ProductPackageSize: addedPackageSize,
+            ProductUnit : addedProductUnit,
+            ProductPrice: addedProductPrice,
+            ProductPriceIsAccurate: addedProductPriceIsAccurate
           }]
         }
         );
       }
       //User has made at least one order, update shopping cart
       else {
-        var product = Orders.findOne({_id: shoppingCart._id, "Products.ProductId": addedProductId}, {"Products.$": 1});
+        var product = Orders.findOne({_id: shoppingCart._id, "Products.ProductId": addedProductId, 'Products.ProductPackageSize':addedPackageSize}, {"Products.$": 1});
         //If this product has been already added to cart
         if (product != null) 
         {
@@ -857,7 +1114,8 @@ if (Meteor.isServer) {
             Orders.update(
             {
               _id: shoppingCart._id,
-              "Products.ProductId": addedProductId
+              "Products.ProductId": addedProductId,
+              "Products.ProductPackageSize":addedPackageSize
             },
             {$set: { "Products.$.ProductAmount" : amount }}
             );
@@ -867,7 +1125,8 @@ if (Meteor.isServer) {
             Orders.update(
             {
               _id: shoppingCart._id,
-              "Products.ProductId": addedProductId
+              "Products.ProductId": addedProductId,
+              "Products.ProductPackageSize":addedPackageSize
             },
             {$inc: { "Products.$.ProductAmount" : 1 }}
             );
@@ -883,13 +1142,16 @@ if (Meteor.isServer) {
             ProductId: addedProductId,
             ProductName: addedProductName,
             ProductAmount: amount,
-            ProductPrice: addedProductPrice
+            ProductPackageSize: addedPackageSize,
+            ProductUnit: addedProductUnit,
+            ProductPrice: addedProductPrice,
+            ProductPriceIsAccurate: addedProductPriceIsAccurate
           }}}
         );
       }
       }
     },
-    removeFromCart: function(currentRoundId, currentUser, removedProductId) {
+    removeFromCart: function(currentRoundId, currentUser, removedProductId, packageSize) {
       var shoppingCart = Orders.findOne({
         UserId: currentUser,
         OrderRoundId :currentRoundId
@@ -898,8 +1160,9 @@ if (Meteor.isServer) {
         Orders.update(
         {
           _id: shoppingCart._id,
+
         },
-        {$pull: { Products : {  ProductId: removedProductId }}}
+        {$pull: { Products : {  ProductId: removedProductId, ProductPackageSize: packageSize }}}
         );
       }
 
@@ -910,6 +1173,17 @@ if (Meteor.isServer) {
     createAccount: function(emailAddress, newPassword) {
       var options = {email: emailAddress, password: newPassword};
       Accounts.createUser(options);
+    },
+    removeAccount: function(id) {
+      Meteor.users.remove( {_id: id });
+    },
+    updateProductPackageAmount: function(parentId, id, value) {
+      Products.update(
+      {
+        _id: parentId, 
+        "ProductPackages._id": id
+      }, 
+      {$set: { "ProductPackages.$.Amount": value}});
     }
     /*productInCart: function(currentRoundId, currentUser, addedProductId) {
       console.log("user:  "+currentUser+ ", round: "+currentRoundId);

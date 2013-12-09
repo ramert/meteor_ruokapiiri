@@ -32,7 +32,7 @@ ul.clickable {
 	cursor: pointer;
 }
 
-li.producer_list_element, li.category_list_element, li.product_list_element, li.order_list_element, li.orderer-list-element {
+li.producer_list_element, li.category_list_element, li.product_list_element, li.order_list_element, li.orderer-list-element, li.producer-list-element  {
 	padding: 3px 3px 3px 10px;
 	margin: 2px 2px 2px 0;
 }
@@ -43,7 +43,8 @@ li.selected {
 	border-radius: 4px;
 }
 li.sign-in {
-	margin-right: 160px;
+	/*margin-right: 160px;*/
+	margin-right: 20px;
 	padding-top: 8px;
 	padding-bottom: 8px;
 	line-height: 20px;
@@ -63,11 +64,9 @@ div.span2 {
 	margin-left: 0px;
 }
 
-.modal {
-  //background-color: #f00;                                                                               
+.modal {                                                                             
   max-width: 50%;                                                                                         
-  max-height: 50%;                                                                                        
-  //position: relative;                                                                                   
+  max-height: 50%;                                                                                                                                                                        
 }
 
 div.full {
@@ -146,6 +145,7 @@ li.someProducts {
 html, body {
 	background-color: #eee;
 	height: 100%;
+	padding: 0;
 }
 .container {
 	width: 300px;
@@ -181,3 +181,45 @@ html, body {
 .span3 {
 	margin-left: 0;
 }
+td.input-amount {
+	height: 28px; 
+	padding-bottom: 4px; 
+	padding-top: 4px;
+}
+select.packageSize-form-control {
+	display: inherit;
+	width: 60px;
+	margin: 0;
+}
+div.span5{
+	padding-right: 10px;
+}
+table {
+	margin-bottom: 10px;
+}
+
+div.products-selection {
+	margin-bottom: 12px;
+}
+div.shopping-cart-info {
+	margin-left: 8px;
+}
+.hiddenRow {
+	padding: 0 !important;
+	border-top: none !important;
+}
+div.product-description {
+	padding-left: 20px;
+	height: 35px;
+}
+table.products tr.accordion-toggle:hover { 
+	background: #E0F0F4; 
+} 
+
+table.products tr.accordion-toggle:hover + tr { 
+	background: #E0F0F4; 
+} 
+table.products tr.desription:hover { 
+	background: #fff; 
+} 
+

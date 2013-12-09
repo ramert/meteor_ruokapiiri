@@ -2,45 +2,45 @@
 <head>
   <title>Ruokapiiri</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
-   <meta name="viewport" content="width=device-width; initial-scale=1.0" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 </head>
 <body>
 	{{#if currentUser}}
 		<div class="tabbable"> <!-- Only required for left/right tabs -->
-		<ul class="nav nav-tabs top-">
+			<ul class="nav nav-tabs top-">
 				<li class="active"><a href="#order_tab" data-toggle="tab">Tilaa</a></li>
 				{{> admin_tab_bar}}
-			<li class="pull-right sign-in">{{loginButtons}}</li>
-		</ul>
+				<li class="pull-right sign-in">{{loginButtons}}</li>
+			</ul>
 			<div class="tab-content">
 				<div class="tab-pane active main" id="order_tab">
 					<div class="row_fluid">
-						<div class="span2">
+						<div class="span2 open-round">
 							{{> open_rounds}}
 						</div>
-						<div class="span10">
-							{{> user_products}}
-						</div>
+						{{> user_products}}
 					</div>
 				</div>	
 				{{> admin_tab_content}}
 			</div>
-	</div>
+		</div>
+		{{>new_category}}
 	{{else }}
-		{{> logInScreen}}
+		{{#if loggingIn}}
+			<span>Kirjautumassa sisään. Odota hetki...</span>
+		{{else}}
+			{{> logInScreen}}
+		{{/if}}
 	{{/if}}
 </body>
 
 <template name="logInScreen">
-	{{#if loggingIn}}
-		<span>Kirjautumassa sisään. Odota hetki...</span>
-	{{else}}
 	<div>
 		<div class="container">
 			<div class="content">
 				<div class="row">
 					<div class="login-form">
-						<form onsubmit="javascript:return false;">
+						<form auto-complete="on" onsubmit="javascript:return false;">
 							{{#if allowAccountCreation}}
 								<h2>Kirjaudu sisään</h2>
 							{{else}}
@@ -64,7 +64,6 @@
 			</div>
 		</div> 
 	</div>
-	{{/if}}
 </template>
 
 <template name="open_rounds">
@@ -101,7 +100,6 @@
 			</div>
 		</div>	
 	</div>
-	{{>new_category}}
 	<div class="tab-pane main" id="producer_tab">
 		<div class="row_fluid">
 			<div class="span2" >
@@ -153,7 +151,6 @@
 				{{/each}}
 			</ul>
 		</div>
-
 </template>
 
 <template name="producer">
@@ -164,7 +161,7 @@
 				<h4>Tuotteet</h4>
 			</div>
 			<div>
-				<button type="button" class="add_product">Lisää tuote</button>
+				<button type="button" class="add_product btn btn-primary">Lisää tuote</button>
 			</div>
 			<div class="row_fluid"> 
 				<div class="span2">
@@ -179,7 +176,7 @@
 						</ul> 
 					</div>
 				</div>
-				<div class="span4">
+				<div class="span6">
 					{{> product}}
 				</div>
 			</div>
@@ -190,12 +187,19 @@
 <template name="product">
 	{{#if product}}
 		{{#with product}}
-			<input name="Name" class="product_name" placeholder="Lisää nimi..." type="Text" value="{{Name}}">
+			<div>
+				<input class="product_name" placeholder="Lisää nimi..." type="text" value="{{Name}}">
+			</div>
+			<div>
+				<span>Kuvaus</span>
+				<textarea class="span5 product_description">{{Description}}</textarea>
+			</div>
 			<div>
 				<span class="span1">Hinta</span>
 				<input name="Price" class="product_price span2" placeholder="Lisää hinta..." type="Number" value="{{Price}}">
-				<span>à {{Unit}}</span>
+				<span>/ {{Unit}}</span>
 			</div>
+
 			<div> 
 				<span class="span1">Kategoria</span>
 				<select class="category-form-control span2">
@@ -234,12 +238,12 @@
   								<th></th>
   							</tr>
   							{{#each ProductPackages}}
-  							<tr>
-  								<td class="span1"><input name="Name" class="package_size span1 amount" type="Text" value="{{this}}"></td>
-  								<td class="span1">{{../Unit}}</td>
-  								<td class="span1">{{../Price}}</td>
-  								<td class="span1"><button class="remove_package close">&times;</button></td>
-  							</tr>
+  								<tr>
+  									<td class="span1"><input name="Name" class="package_size span1 amount" type="Text" value="{{this.Amount}}"></td>
+  									<td class="span1">{{../Unit}}</td>
+  									<td class="span1">{{totalPrice this.Amount ../Price}}</td>
+  									<td class="span1"><button class="remove_package close">&times;</button></td>
+  								</tr>
   							{{/each}}
   						</table>
   					</div>
@@ -253,16 +257,16 @@
 <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
 	<div class="modal-dialog">                                                                                
 		<div class="modal-content">                                                                               
-			<div class="modal-header">                                                                                
-				<a class="close" data-dismiss="modal">×</a>                                                             
-				<h5>Anna nimi uudelle kategorialle </h5>                                                                        
-			</div>                                                                                                    
+			<div class="modal-header">                                                                               
+				<a class="close" data-dismiss="modal">×</a>                                                          
+				<h5>Anna nimi uudelle kategorialle </h5>                           
+			</div>                                                       
 			<div class="modal-body" >
-				<input id="new_category_name" placeholder="Lisää nimi..." type="Text">                                                           
-			</div>                                                                                                    
-			<div class="modal-footer">                                                                                
-				<a href="#" class="add_user btn btn-success" data-dismiss="modal">Lisää kategoria</a>                                                  
-				<a href="#" class="btn" data-dismiss="modal">Peruuta</a>                                                  
+				<input id="new_category_name" placeholder="Lisää nimi..." type="Text">
+			</div>
+			<div class="modal-footer">
+				<a href="#" class="add_category btn btn-success" data-dismiss="modal">Lisää kategoria</a> 
+				<a href="#" class="btn" data-dismiss="modal">Peruuta</a>
 			</div>  
 		</div>
 	</div>
@@ -271,7 +275,29 @@
 
 <template name="user_products">
 	{{#if round_is_open}}
-	<div class="tabbable"> <!-- Only required for left/right tabs -->
+	<div class="span5">
+		<div class="products-selection">
+			<span class="large">Tuotteet</span>
+			<span class="info">{{deadline}} </span>
+		</div>
+		<div id="products">
+			{{> product_list}}
+		</div>
+	</div>	
+	<div class="span5">
+		<div>
+			{{> user_shopping_cart}}
+		</div>
+		<div id="products">
+			{{> shopping_cart}}
+		</div>
+		<div>	
+	{{/if}}
+</template>
+
+<!--<template name="user_products">
+	{{#if round_is_open}}
+	<div class="tabbable span10"> 
 		<ul class="nav nav-tabs">
 			<li class="active two_tabs"><a href="#products" data-toggle="tab">
 				<span class="large">Tuotteet</span>
@@ -293,7 +319,7 @@
 		</div>
 	</div>
 	{{/if}}
-</template>
+</template>-->
 
 <template name="user_shopping_cart">
 	<span class="large">Ostoskori</span>
@@ -306,15 +332,15 @@
 			{{#if hasProducts _id}}
 			<div>
 				<button type="button" class="category-expand btn btn-info" data-toggle="collapse" data-target="#{{_id}}">
-					{{Name}}
+					+ {{Name}}
 				</button>
 				<div id="{{_id}}" class="collapse in product-list">
 					<div class="table-responsive">
-  						<table class="table">
+  						<table class="table products">
   							<tr>
-  								<th class="span2">Nimi</th>
+  								<th class="span1">Nimi</th>
   								<th class="span1">Hinta</th>
-  								<th class="span1">Pakkauskoko</th>
+  								<th class="span1">Pakkaus</th>
   								<th class="span1"> </th>
   							</tr>
   							{{#each products _id}}
@@ -331,23 +357,39 @@
 
 <template name="product_row">
 	{{#with product ProductId}}
-	<tr>
-		<td class="topPadding span2">{{Name}}</td>
-		<td class="topPadding span1">{{Price}} €</td>
-		<td class="topPadding span1">1 {{Unit}}</td>
+	<tr data-toggle="collapse" data-target="#{{_id}}" class="accordion-toggle">
+		<td class="topPadding span1">{{Name}}</td>
+		<td class="topPadding span1">{{Price}} € / {{Unit}}</td>
+		<td class="topPadding span1">
+			<span>{{isInaccurate}}</span>
+			<select {{multiplePackages}} class="packageSize-form-control span1">
+			{{#each ProductPackages}}
+				<option >{{Amount}} </option>
+			{{/each}}
+			</select>
+			<span>{{Unit}}</span>
+		</td>
 		<td class="span1">
 			<button type="button" class="add_basket btn btn-primary">Lisää koriin</button>
 		</td>
 	</tr>
+	<tr class="desription">
+		<!-- Prevent from triggering expand with select click / Add to cart!-->
+        <td colspan="4" class="hiddenRow">
+          	<div class="accordian-body collapse" id="{{_id}}" aria-hidden="true">
+          	 <div class="product-description">{{Description}}</div> 
+          	</div>         
+        </td>
+     </tr>
 	{{/with}}
 </template>
 
 <template name="users">
-	<div class="main">
+	<div class="main span6">
 	{{#each users}}
 		<div>
-			<span>{{emails.0.address}}</span>
-			<button type="button" class="allow_order btn btn-primary">Salli tilaukset</button>
+			<span class="span4">{{emails.0.address}}</span>
+			<!--<button type="button" class="allow_order btn btn-primary">Salli tilaukset</button>-->
 			<button type="button" class="allow_admin btn btn-warning">Salli hallinnointi</button>
 			<button class="remove_user close">&times;</button>
 		</div>
@@ -356,7 +398,9 @@
 </template>
 
 <template name="shopping_cart">
-	<span>Voit muokata tuotteita ostokorissa tilauksen sulkeutumiseen asti, jonka jälkeen tilaus lähetään tuottajile eikä sitä voi enää muuttaa.</span>
+	<div class="shopping-cart-info">
+		<span>Voit muokata tuotteita ostokorissa tilauksen sulkeutumiseen asti, jonka jälkeen tilaus lähetetään tuottajille eikä sitä voi enää muuttaa.</span>
+	</div>
 	{{#with cart}}
 		{{#each this}}
 			<div class="table-responsive shopping-cart">
@@ -364,7 +408,7 @@
   					<tr>
   						<th class="span4">Nimi</th>
   						<th class="span2">Hinta</th>
-  						<th class="span2">Pakkauskoko</th>
+  						<th class="span2">Pakkaus</th>
   						<th class="span2">Määrä</th>
   						<th class="span2">Yhteensä</th>
   						<th> </th>
@@ -390,8 +434,8 @@
 	{{#with this}}
 	<tr>
 		<td class="span4">{{ProductName}}</td>
-		<td class="span2">{{ProductPrice}} €</td>
-		<td class="span2">1 Kpl</td>
+		<td class="span2">{{ProductPrice}} € / {{ProductUnit}}</td>
+		<td class="span2">{{ProductPackageSize}} {{ProductUnit}}</td>
 		<td class="span2"><input class="amount" type="number" value="{{ProductAmount}}"></td>
 		<td class="span2">{{count}} €</td>
 		<td><button class="remove_product close">&times;</button></td>
@@ -424,20 +468,31 @@
 				<button type="button" class="open_round btn btn-success">Avaa kierros</button>	
 			{{/if}}
 			<span>Kierros sulkeutuu</span>
-			<input class="datepicker" type="text" id="datepicker" data-date-format="dd.MM.yyyy" value="{{endDate}}"/>
-			<span>-</span>
-			<!--<input class="input-append time" type="text" id="timepicker" value="{{endTime}}"/>-->
+			<input class="datepicker" type="text" id="datepicker" data-date-format="dd.mm.yyyy" value="{{endDate}}"/>
+			<!--<span>-</span>
+			<input class="input-append time" type="text" id="timepicker" value="{{endTime}}"/>-->
 		</div>
 		<ul class="nav nav-tabs">
 			<li class="active two_tabs"><a href="#roundProducts" data-toggle="tab">Tuotteet</a></li>
-			<li class="two_tabs"><a href="#byOrderer" data-toggle="tab">Tilaukset</a></li>
+			<li class="two_tabs"><a href="#roundOrders" data-toggle="tab">Tilaukset</a></li>
 		</ul>
 		<div class="tab-content">
 			<div class="tab-pane active" id="roundProducts">
 				{{> products_for_round}}
 			</div>
-			<div class="tab-pane" id="byOrderer">
-				{{> orders_by_orderer}}
+			<div class="tab-pane" id="roundOrders">
+				<ul class="nav nav-tabs">
+					<li class="active two_tabs"><a href="#byProducer" data-toggle="tab">Tuottajittain</a></li>
+					<li class="two_tabs"><a href="#byOrderer" data-toggle="tab">Tilaajittain</a></li>
+				</ul>
+				<div class="tab-content">
+					<div class="tab-pane active" id="byProducer">
+						{{> orders_by_producer}}
+					</div>
+					<div class="tab-pane" id="byOrderer">
+						{{> orders_by_orderer}}
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -470,14 +525,15 @@
 	<div class="span8">
 		<div class="table-responsive shopping-cart">
   			<table class="table">
+  				{{#if productOrCategorySelected}}
   				<tr>
   					<th clsss="span1"><input type="checkbox" class="selectAll" {{all_products_selected}}></th>
   					<th class="span4">Nimi</th>
   					<th class="span2">Yksikkö</th>
-  					<th class="span2">Pakkauskoko</th>
 					<th class="span2">Hinta</th>
   					<th> </th>
   				</tr>
+  				{{/if}}
 				{{#if productSelected}}
 					{{#each products_for_producer}}
 						{{> order_round_product_row}}
@@ -499,9 +555,58 @@
 		<td class="span1"><input type="checkbox" {{product_selected_for_round}}></td>
 		<td class="span4">{{Name}}</td>
 		<td class="span2">{{Unit}}</td>
-		<td class="span2">1</td>
-		<td class="span2">{{Price}}</td>
+		<td class="span2">{{Price}} €</td>
 	</tr>
+</template>
+
+<template name="orders_by_producer">
+	<div class"row_fluid"> 
+		<div class="span2">
+			<div>
+				<ul class="clickable unstyled">
+					{{#each producers}}
+					<li href="#" class="producer-list-element {{selected}}">
+						{{Name}}
+					</li>
+					{{/each}}
+				</ul> 
+			</div>
+		</div>
+		<div class="span8">
+			<div class="table-responsive shopping-cart">
+  				<table class="table">
+  					<tr>
+  						<th class="span4">Nimi</th>
+  						<th class="span1">Pakkaus</th>
+  						<th class="span1">Määrä</th>
+  						<th class="span1">Hinta</th>
+  						<th class="span1">Yhteensä</th>
+  					</tr>
+					{{#each products}}
+						{{#each ProductPackages}}
+							{{#if amount ../ProductId}}
+							<tr>
+								<td>{{productName ../../ProductId}}</td>
+  								<td>{{Amount}} {{unit ../../ProductId}}</td>
+  								<td>{{amount ../../ProductId}}</td>
+  								<td>{{price ../../ProductId}} € / {{unit ../../ProductId}}</td>
+  								<td>{{total ../../ProductId}} €</td>
+							</tr>
+							{{/if}}
+						{{/each}}
+					{{/each}}
+					<tr>
+						<th></th>
+  						<th></th>
+  						<th></th>
+  						<th>Yhteensä</th>
+  						<th>{{products_price}} €</th>
+					</tr>	
+			  	</table>
+  			</div>
+			
+		</div>
+	</div>
 </template>
 
 <template name="orders_by_orderer">
@@ -530,9 +635,9 @@
   				<table class="table">
   					<tr>
   						<th class="span4">Nimi</th>
-  						<th class="span1">Hinta</th>
-  						<th class="span1">Pakkauskoko</th>
+  						<th class="span1">Pakkaus</th>
   						<th class="span1">Määrä</th>
+  						<th class="span2">Hinta</th>
   						<th class="span1">Yhteensä</th>
   						<th> </th>
   					</tr>
@@ -548,10 +653,10 @@
 					</tr>
 			  	</table>
   			</div>
-  			<div>
-  				
+  			<div>				
   				<button type="button" class="payment-complete float-right btn btn-primary">Maksettu</button>
 				<button type="button" class="delivery-complete float-right space-right btn btn-primary">Haettu</button>
+				<button type="button" class="ready-for-delivery float-right space-right btn btn-primary">Jaeltu</button>
   			</div>
   		{{/each}}
 	{{/with}}
@@ -561,10 +666,19 @@
 	{{#with this}}
 	<tr>
 		<td>{{ProductName}}</td>
-		<td>{{ProductPrice}} €</td>
-		<td>1 Kpl</td>
+		<td>{{ProductPackageSize}} {{ProductUnit}}</td>
 		<td>{{ProductAmount}}</td>
-		<td><input class="amount" type="number" value="{{count}}"><span> €</span></td>
+		<td>{{ProductPrice}} € / {{ProductUnit}}</td>
+		{{#if ProductPriceIsAccurate}}
+			<td>
+				<span>{{count}} €</span>
+			</td>
+		{{else}}
+			<td class="input-amount">
+				<input class="totalPrice amount" type="number" value="{{count}}">
+				<span> €</span>
+			</td>
+		{{/if}}
 		<td><button class="remove-product close">&times;</button></td>
 	</tr>
 	{{/with}}
