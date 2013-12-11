@@ -2,6 +2,7 @@
   "packages": {
     "bootstrap-datepicker2": {},
     "bootstrap-timepicker": {},
-    "bootstrap-datetimepicker": {}
+    "bootstrap-datetimepicker": {},
+    "bootstrap-3-timepicker": {}
   }
 }

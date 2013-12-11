@@ -156,7 +156,11 @@
 <template name="producer">
 	{{#if producer}}
 		{{#with producer}}
-			<input name="Name" placeholder="Insert name..." type="Text" value="{{Name}}">
+			<input class="producer_name" placeholder="Insert name..." type="text" value="{{Name}}">
+			<div>
+				<span>Sähköpostiosoite</span>
+				<input class="producer_email" type="email" value="{{Email}}">
+			</div>
 			<div>
 				<h4>Tuotteet</h4>
 			</div>
@@ -469,8 +473,9 @@
 			{{/if}}
 			<span>Kierros sulkeutuu</span>
 			<input class="datepicker" type="text" id="datepicker" data-date-format="dd.mm.yyyy" value="{{endDate}}"/>
-			<!--<span>-</span>
-			<input class="input-append time" type="text" id="timepicker" value="{{endTime}}"/>-->
+			<span>-</span>
+			<input class="timepicker" type="text" id="timepicker" value="{{endTime}}">
+				<i class="icon-time"></i>
 		</div>
 		<ul class="nav nav-tabs">
 			<li class="active two_tabs"><a href="#roundProducts" data-toggle="tab">Tuotteet</a></li>

@@ -33,41 +33,38 @@ if (Meteor.isClient) {
   var inaccuratePrice = 'Ei tarkka';
 
 
-//Initialize jquery ui date picker and time picker
+//Initialize jquery ui date picker and time picker. As separate with hack date setting, because no good enough date & time commponent found.
 
   Template.orders.rendered = function() {
-    //console.log("Datepicker initialized!");
-   $('#datepicker').datepicker( { autoclose: true,weekStart: 1 }).on('changeDate', function(event) {
+   $('#datepicker').datepicker( { 
+      autoclose: true,
+      weekStart: 1 
+    }).on('changeDate', function(event) {
       var selectedRoundId = Session.get('admin_selected_order_round');
       var endDate = new Date(event.date);
       if (endDate != null) {
-        var newName = "Tilaus "+formatDate(endDate);
-        //console.log("Setting value for: "+selectedRoundId+" to: "+endDate);
-        OrderRounds.update({_id: selectedRoundId}, {$set: { Name: newName, RoundDeadline: endDate}});
-        //console.log(OrderRounds.find({}));
+        var time = $('#timepicker').val();
+        console.log(time);
+        if (time == null) {
+          time = "20:00";
+        }
+        setDateAndTime(endDate, time);
       }
    });
-   /*$('#timepicker').timepicker({
-    //TODO: selection does not work...
-      //minuteStep: 30,
-      //template: 'modal',
-      //appendWidgetTo: '#timepicker',
-      //showSeconds: true,
-      showMeridian: false,
-      defaultTime: false,
-      //minuteStep: 15
-      showInputs: true
-      //disableFocus: false
-   }).on('changeTime', function(event) {
-      var selectedRoundId = Session.get('admin_selected_order_round');
-      var endTime = event.date;
-      if (endDate != null) {
-        var newName = "Tilaus "+formatDate(endDate);
-        //console.log("Setting value for: "+selectedRoundId+" to: "+endDate);
-        OrderRounds.update({_id: selectedRoundId}, {$set: { Name: newName, RoundDeadline: endDate}});
-
-
-   });*/
+   $('#timepicker').timepicker({
+        showMeridian: false,
+        template: false,
+        showInputs: true,
+        minuteStep: 30
+      }).on('changeTime.timepicker', function(event) {
+        var endDate = $('#datepicker').data('datepicker').date;
+        if (endDate != null) {
+          var time = event.time.value;
+          if (time != null) {
+            setDateAndTime(endDate, time);
+          }
+        }
+    });
   };
 
   Handlebars.registerHelper("isAdmin", function() {
@@ -78,6 +75,27 @@ if (Meteor.isClient) {
    }
    return false;
   });
+
+  function setDateAndTime(date, time){
+    var selectedRoundId = Session.get('admin_selected_order_round');
+    var selectedRound = OrderRounds.findOne({_id: selectedRoundId});
+    var hours = parseHours(time);
+    var minutes = parseMinutes(time); 
+    date.setHours(hours);
+    date.setMinutes(minutes);
+    //console.log("Setting value for: "+selectedRoundId+" to: "+endDate);
+    var newName = "Tilaus "+formatDate(date);
+    OrderRounds.update({_id: selectedRoundId}, {$set: { Name: newName, RoundDeadline: date}});
+    //console.log(OrderRounds.find({}));
+  }
+
+  function parseHours(time) {
+    return time.slice(0,2);
+  }
+
+  function parseMinutes(time) {
+    return time.slice(3,5);
+  }
 
   function roundToOneDecimal(number) {
     //console.log(number+" after rounding: "+Math.round(number*10)/10:
@@ -316,9 +334,11 @@ if (Meteor.isClient) {
         var orderRound = OrderRounds.findOne({_id: selectedRoundId});
         var deadline = orderRound.RoundDeadline;
         if (deadline != null) {
-          //TODO make time work
-          var time = '18:00'
-          return "Kierros sulkeutuu "+formatDate(deadline)+ " Kello: "+ time;
+          var deadlineTime = orderRound.RoundDeadlineTime;
+          if (deadlineTime == null) {
+            var deadlineTime = '18:00'
+          }
+          return "Kierros sulkeutuu "+formatDate(deadline)+ " Kello: "+ deadlineTime;
         }
         else {
           return "Kierroksella ei ole määräaikaa"; 
@@ -411,7 +431,7 @@ if (Meteor.isClient) {
         //console.log("Comparing: "+product.ProductId+",  to "+selectProductId);
         //var result = (product.ProductId == this.ProductId);
         //There is a bug in Meteor mongodb mini, it 
-        //console.log(product.ProductPackageSize+" ? "+amount)
+        //console.log(product.ProductPackageSize+" ? "+selectPackageSize)
         if (product.ProductId == selectProductId && product.ProductPackageSize == selectPackageSize) {
           amount = amount+product.ProductAmount;
         }
@@ -491,7 +511,9 @@ if (Meteor.isClient) {
     var producerId = Session.get('rounds_products_for_producer');
     var currentRoundId = Session.get('admin_selected_order_round');
     if (producerId != null && currentRoundId != null) {
-      return OrderRounds.find({parent: currentRoundId, ProducerId: producerId});
+      var productsForProducer = OrderRounds.find({parent: currentRoundId, ProducerId: producerId});
+      //console.log(productsForProducer);
+      return productsForProducer;
     }
   }
 
@@ -559,14 +581,12 @@ if (Meteor.isClient) {
   }
  
   Template.users_shopping_cart_rows.count = function() {
-    //console.log(this);
     var total = this.ProductPrice*this.ProductAmount*this.ProductPackageSize;
 
     return roundToOneDecimal(total);
   }
 
   Template.order_rounds.order_rounds = function() {
-    //console.log(OrderRounds.find({}, {sort: {Name: 1}}));
     return OrderRounds.find({parent: null}, {sort: {Name: 1}});
   }
 
@@ -608,7 +628,6 @@ if (Meteor.isClient) {
 
   Template.products_for_round.productChildrenSelected = function() {
     var roundProductsForProducer = OrderRounds.find({parent: Session.get('admin_selected_order_round'), ProducerId: this._id });
-    //console.log(roundProductsForProducer);
     if (roundProductsForProducer != null) {
       var amountInRound = roundProductsForProducer.count();
       return amountInRound == 0 ? '':'someProducts';
@@ -634,7 +653,6 @@ if (Meteor.isClient) {
   }
 
   Template.products_for_round.products_for_category = function() {
-    //console.log(Products.find({category_id: Session.get('current_category_for_round')}, {sort: {Name: 1}}))
     return Products.find({category_id: Session.get('current_category_for_round')}, {sort: {Name: 1}});
   }
 
@@ -668,15 +686,12 @@ if (Meteor.isClient) {
 
   Template.order_round_product_row.product_selected_for_round = function() {
     var productInRound = OrderRounds.findOne({parent: Session.get('admin_selected_order_round'), ProductId: this._id });
-    //console.log(Session.get('admin_selected_order_round')+" and query: "+productInRound);
-    //console.log("Product: "+this._id+", Query: "+productInRound);
 
     return productInRound == undefined ? '':'checked';
   }
 
   Template.order_rounds.roundSelected = function() 
   {
-      //console.log("Is round selected: "+this._id);
       return Session.get('admin_selected_order_round') == this._id ? 'selected' : '';
   }
 
@@ -694,7 +709,24 @@ if (Meteor.isClient) {
   }
 
   Template.orders.endTime = function() {
-    return "18:00";
+    var selectedRoundId = Session.get('admin_selected_order_round');
+    if (selectedRoundId != null) {
+      var orderRound = OrderRounds.findOne({_id: selectedRoundId});
+      if (orderRound != null) {
+        var deadline = orderRound.RoundDeadline;
+        if (deadline != null) {
+          var hours = deadline.getHours();
+          var minutes = deadline.getMinutes();
+          if (hours < 10) {
+            hours = '0'+hours;
+          }
+          if (minutes < 10) {
+            minutes = '0'+minutes;
+          }
+          return hours+":"+minutes;
+        }
+      }
+    }
   }
 
   Template.orders.roundSelected = function() {
@@ -740,8 +772,11 @@ if (Meteor.isClient) {
   });
 
   Template.producer.events( {
-    'blur input':function(event,context) {
+    'blur .producer_name':function(event,context) {
         Producers.update(this._id, {$set:{Name : event.target.value}});
+    },
+    'blur .producer_email' : function(event, context) {
+        Producers.update(this._id, {$set: {Email: event.target.value}});
     },
     'click .add_product': function() {
       //TODO: Fix hack solution with .toString. What is the object id with attribute?
@@ -796,30 +831,21 @@ if (Meteor.isClient) {
       {
         isAccurate = true;
       }
-      console.log("Setting accurate to:"+isAccurate);
       Products.update(current_product_id, {$set: {PriceIsAccurate: isAccurate}});
     },
     'click .add_size_unit' : function(event, contect) {
-      //var packages = this.ProductPackages;
-
       Products.update(this._id, {$push: {ProductPackages: {ParentId: this._id, Amount: 1, _id: new Meteor.Collection.ObjectID()}}});
-      console.log("Adding size unit:"+this._id);
     },
     'click .remove_package' : function(event, context) {
-      //console.log(event.target.parentId);
-      console.log(context.data._id);
-      console.log("Removing size unit: "+this.ParentId+" , "+this._id);
       Products.update(this.ParentId, {$pull: {ProductPackages: { _id : this._id}}});
     },
     'blur .package_size' : function(event, context) {
-      //console.log("Trying to update: "+event.target.value);
       Meteor.call('updateProductPackageAmount', this.ParentId, this._id, event.target.value);
     }
   });
 
   Template.new_category.events({
     'click .add_category' : function (event, context) {
-      console.log(context.find('input').value);
       Categories.insert({Name : context.find("input").value});
     },
   });
@@ -827,7 +853,6 @@ if (Meteor.isClient) {
   Template.users.events({
     'click .allow_order' : function() {
       Meteor.users.update({_id: this._id}, {$set: {role: 'normal'}});
-      //console.log(Meteor.users.findOne({_id: this._id}));
     },
     'click .allow_admin' : function() {
       Meteor.users.update({_id: this._id}, {$set: {role: 'admin'}});
@@ -902,7 +927,7 @@ if (Meteor.isClient) {
 
   Template.order_rounds.events({
     'click .add_round' : function() {
-      OrderRounds.insert({Name: 'Uusi kierros', Open: false});
+      OrderRounds.insert({Name: 'Uusi kierros', Open: false, RoundDeadlineTime: '20:00'});
     },
     'click .order_list_element' : function() {
       Session.set('admin_selected_order_round', this._id);
@@ -957,7 +982,8 @@ if (Meteor.isClient) {
         OrderRounds.insert(
           {
             parent: Session.get('admin_selected_order_round'),
-            ProductId: this._id, 
+            ProductId: this._id,
+            ProductPackages: this.ProductPackages, 
             CategoryId: this.category_id,
             ProducerId: this.Producer_id
           }
@@ -1026,17 +1052,16 @@ if (Meteor.isClient) {
 }
 if (Meteor.isServer) {
   Meteor.startup(function () {
+    //If need to clean stuff enable these...
+    //OrderRounds.remove({});
+    //Orders.remove({});
+
     //If no users defined, create admin
     if (Meteor.users.find({}).count() == 0)
     {
         var options = {email: 'rami.ertimo@gmail.com', password: 'admin'};
         Accounts.createUser(options);
     }
-    //If need to clean Order rounds...
-    //OrderRounds.remove({});
-    //Products.remove({});
-    //Orders.remove({});
-    //Meteor.users.remove({});
 
     Meteor.publish("producers", function() {
       //TODO check for admin role.
@@ -1065,6 +1090,16 @@ if (Meteor.isServer) {
 
     Meteor.publish("orderRounds", function() {
       return OrderRounds.find({});
+    });
+
+    Meteor.publish("users", function () {
+      var user= Meteor.users.findOne(this.userId);
+      if (user && user.role == 'admin') {
+        return Meteor.users.find({});
+      }
+      else {
+        return Meteor.users.find({_id: this.UserId});
+      }
     });
 
     Meteor.methods({
@@ -1200,19 +1235,24 @@ if (Meteor.isServer) {
         return null;
       }
     }*/
-  });    
-});
-
-
-  Meteor.publish("users", function () {
-    var user= Meteor.users.findOne(this.userId);
-    if (user && user.role == 'admin') {
-        return Meteor.users.find({});
-    }
-    else {
-      return Meteor.users.find({_id: this.UserId});
-    }
+    });    
   });
+
+
+//TODO: make autmmatic round closing work!
+  Meteor.setInterval(function() {
+    var openRounds = OrderRounds.find({Open: true});
+    openRounds.forEach(function(round) {
+      var currentDateAndTime = new Date();
+      var openRoundDeadline = round.RoundDeadline;
+      if (currentDateAndTime > openRoundDeadline)
+      {
+        OrderRounds.update({_id : round._id}, {$set: {Open: false}});
+      }
+    });
+  }, 30000)
+
+
 
   //TODO: Example about role handling... 
   /*Meteor.publish("extraUserData", function () {
