@@ -42,6 +42,10 @@ li.selected {
 	color: white;
 	border-radius: 4px;
 }
+
+li.open-round {
+	font-weight: bold;
+}
 li.sign-in {
 	/*margin-right: 160px;*/
 	margin-right: 20px;
@@ -222,4 +226,6 @@ table.products tr.accordion-toggle:hover + tr {
 table.products tr.desription:hover { 
 	background: #fff; 
 } 
-
+input.mini {
+	margin: 0;
+}

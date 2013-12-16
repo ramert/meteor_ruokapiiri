@@ -4,6 +4,10 @@ Products = new Meteor.Collection("Products");
 Orders = new Meteor.Collection("Orders");
 OrderRounds = new Meteor.Collection("OrderRounds");
 
+ var READY_FOR_DELIVERY = 3;
+ var DELIVERY_COMPLETE = 6;
+ var PAYMENT_COMPLETE = 9;
+
 if (Meteor.isClient) {
   Session.setDefault('current_producer', null);
   Session.setDefault('current_product', null);
@@ -40,7 +44,6 @@ if (Meteor.isClient) {
       autoclose: true,
       weekStart: 1 
     }).on('changeDate', function(event) {
-      var selectedRoundId = Session.get('admin_selected_order_round');
       var endDate = new Date(event.date);
       if (endDate != null) {
         var time = $('#timepicker').val();
@@ -76,6 +79,28 @@ if (Meteor.isClient) {
    return false;
   });
 
+  Handlebars.registerHelper("usersShoppingCart", function() {
+    var select_round = Session.get('user_selected_order_round');
+    if (select_round != null) {
+      var myCart = Orders.findOne({
+        UserId: Meteor.userId(),
+        OrderRoundId : select_round
+      }, {sort: {"Products.ProductName": 1}});
+      //console.log(myCart);
+      return  myCart;
+    }
+  });
+
+  Handlebars.registerHelper("countProductPrice", function(product) {
+    var total = product.ProductPrice*product.ProductAmount*product.ProductPackageSize;
+
+    return roundToOneDecimal(total);
+  });
+
+  Handlebars.registerHelper("shoppingCartTotal", function() {
+    return getShoppingCartsTotal(Meteor.userId(), Session.get('user_selected_order_round'));
+  });
+
   function setDateAndTime(date, time){
     var selectedRoundId = Session.get('admin_selected_order_round');
     var selectedRound = OrderRounds.findOne({_id: selectedRoundId});
@@ -86,6 +111,13 @@ if (Meteor.isClient) {
     //console.log("Setting value for: "+selectedRoundId+" to: "+endDate);
     var newName = "Tilaus "+formatDate(date);
     OrderRounds.update({_id: selectedRoundId}, {$set: { Name: newName, RoundDeadline: date}});
+    var currentTime = new Date();
+    if (date < currentTime) {
+      OrderRounds.update({_id: selectedRoundId}, {$set: { Open: false, CanOpen: false}});
+    }
+    else {
+      OrderRounds.update({_id: selectedRoundId}, {$set: { CanOpen: true}});
+    }
     //console.log(OrderRounds.find({}));
   }
 
@@ -140,7 +172,15 @@ if (Meteor.isClient) {
       }
       var year = formattedDate.getFullYear();
       return date+"."+month+"."+year; 
-
+  }
+  function formatTime(hours, minutes) {
+    if (hours < 10) {
+      hours = '0'+hours;
+    }
+    if (minutes < 10) {
+      minutes = '0'+minutes;
+    }
+    return hours+":"+minutes;
   }
 
   /*function getOpenOrderRound()
@@ -156,8 +196,23 @@ if (Meteor.isClient) {
   {
     var currentRoundId = Session.get('user_selected_order_round');
     var currentUser = Meteor.userId();
-    console.log(currentRoundId+" and: "+currentUser);
+    //console.log(currentRoundId+" and: "+currentUser);
     Meteor.call('updateCart', currentRoundId, currentUser, addedProductId, addedProductName, addedProductPrice, addedProductPriceIsAccurate, addedPackageSize, addedProductUnit, addedProductAmount, increment);
+  }
+
+  function setCartStatus(cartId, setStatus) {
+    var cart = Orders.findOne({_id: cartId});
+    var status = cart.Status;
+    //console.log("Status: "+status);
+    if (status >= setStatus)
+    {
+      status = setStatus-1;
+      Orders.update({_id: cartId}, {$set: {Status: status}});
+    }
+    else {
+      //console.log("Setting status to: "+setStatus+ "for cart: "+cart);
+      Orders.update({_id: cartId}, {$set: {Status: setStatus}});
+    }
   }
 
 
@@ -185,8 +240,22 @@ if (Meteor.isClient) {
     return Session.equals('current_product', this._id) ? 'selected' : '';
   }
 
-  Template.open_rounds.selected = function() {
+  Template.users_rounds.all_open_rounds = function() {
+    return OrderRounds.find({parent: null, Open: true});
+  }
+
+  Template.users_rounds.selected = function() {
     return Session.equals('user_selected_order_round', this._id) ? 'selected' : '';
+  }
+
+  Template.users_rounds.past_order_round = function() {
+    var ordersForUser = Orders.find({UserId: Meteor.userId()});
+    var userRoundIds = [];
+    ordersForUser.forEach(function(ordersForRound) {
+      userRoundIds.push(ordersForRound.OrderRoundId);
+    });
+    return OrderRounds.find({parent: null, Open: false, _id: {$in: userRoundIds}}, {sort: {Name: -1}});
+    
   }
 
   Template.product.product = function() {
@@ -259,7 +328,7 @@ if (Meteor.isClient) {
     return this.PriceIsAccurate ? '': '~';
   }
 
-  Template.product_row.buttonText = function() {
+  /*Template.product_row.buttonText = function() {
     //console.log("User:"+Meteor.userId()+", Round: "+Session.get('user_selected_order_round')+", Product "+this._id);
 
     var product = Orders.findOne({UserId: Meteor.userId(), OrderRoundId: Session.get('user_selected_order_round'), "Products.ProductId": this._id});
@@ -270,9 +339,9 @@ if (Meteor.isClient) {
     else {
       return "Lisää vielä";
     }
-  }
+  }*/
 
-  Template.product_row.inCart = function() {
+  /*Template.product_row.inCart = function() {
      var product = Orders.findOne({UserId: Meteor.userId(), OrderRoundId: Session.get('user_selected_order_round'), "Products.ProductId": this._id});
     
     if (product == null) {
@@ -281,30 +350,10 @@ if (Meteor.isClient) {
     else {
       return "btn-primary";
     }
-
-  }
+  }*/
 
   Template.users.users = function() {
     return Meteor.users.find({}, {sort: {Name: 1}});
-  }
-
-  Template.shopping_cart.cart = function() {
-
-    var select_round = Session.get('user_selected_order_round');
-
-    if (select_round != null) {
-      var myCart = Orders.find({
-        UserId: Meteor.userId(),
-        OrderRoundId : select_round
-      }, {sort: {"Products.ProductName": 1}});
-      return  myCart;
-    }
-  }
-
-  Template.shopping_cart_rows.count = function() {
-    var total = roundToOneDecimal(this.ProductPrice*this.ProductAmount*this.ProductPackageSize);
-
-    return total;
   }
 
   Template.user_products.round_selected = function() {
@@ -320,7 +369,6 @@ if (Meteor.isClient) {
         if (orderRound != null) {
           return orderRound.Open;
         }
-
     }
     else {
       return false;
@@ -334,10 +382,10 @@ if (Meteor.isClient) {
         var orderRound = OrderRounds.findOne({_id: selectedRoundId});
         var deadline = orderRound.RoundDeadline;
         if (deadline != null) {
-          var deadlineTime = orderRound.RoundDeadlineTime;
-          if (deadlineTime == null) {
-            var deadlineTime = '18:00'
-          }
+          var hours = deadline.getHours();
+          var minutes = deadline.getMinutes();
+          var deadlineTime = formatTime(hours, minutes);
+
           return "Kierros sulkeutuu "+formatDate(deadline)+ " Kello: "+ deadlineTime;
         }
         else {
@@ -360,7 +408,6 @@ if (Meteor.isClient) {
     //console.log(shoppingCart);
     if (shoppingCart != null) {
       var actualProducts = shoppingCart.Products;
-
       for (i in actualProducts) {
         amountOfItems += actualProducts[i].ProductAmount;
       }
@@ -375,12 +422,14 @@ if (Meteor.isClient) {
     }
   }
 
-  Template.user_shopping_cart.products_price = function() {
-    return getShoppingCartsTotal(Meteor.userId(), Session.get('user_selected_order_round'));
-  }
-
-  Template.shopping_cart.products_price = function() {
-    return getShoppingCartsTotal(Meteor.userId(), Session.get('user_selected_order_round'));
+  Template.orders.canOpen = function() {
+    var currentRoundId = Session.get('admin_selected_order_round');
+    var round = OrderRounds.findOne({_id: currentRoundId});
+    if (round != null) {
+      var canOpen = round.CanOpen;
+      //console.log(canOpen);
+      return !canOpen ? 'disabled': '';
+    }
   }
 
   Template.orders_by_producer.producers = function() {
@@ -422,7 +471,9 @@ if (Meteor.isClient) {
     //var selectProductId = this.ProductId;
     var currentRoundId = Session.get('admin_selected_order_round');
     //This does not work currently
+
     var shoppingCartWithProduct = Orders.find({OrderRoundId: currentRoundId}, { Products: { $elemMatch: {ProductId: selectProductId}}});
+    //var shoppingCartWithProduct = Meteor.call('OrdersWithProductAndPackage', currentRoundId, selectedProductId, selectedPackageSize);
     //console.log(shoppingCartWithProduct);
     shoppingCartWithProduct.forEach(function(cart) {
       //console.log("Cart: "+cart);
@@ -437,7 +488,7 @@ if (Meteor.isClient) {
         }
         else {
           //TODO: what for new release with the bug fixed with $elemMatch funct
-          //console.log("So got also something that should not be");
+          console.log("So got also something that should not be");
         }
       }); 
     });
@@ -565,10 +616,31 @@ if (Meteor.isClient) {
     return Session.equals('rounds_products_for_orderer', this.UserId) ? 'selected' : '';
   }
 
+  Template.orders_by_orderer.isReadyForDelivery = function() {
+    var cart = Orders.findOne({_id: this._id});
+    var status = cart.Status;
+
+    return status >= READY_FOR_DELIVERY ? 'checked': '';
+  }
+
+  Template.orders_by_orderer.isDeliveryComplete  = function() {
+    var cart = Orders.findOne({_id: this._id});
+    var status = cart.Status;
+
+    return status >= DELIVERY_COMPLETE ? 'checked': '';
+  }
+
+    Template.orders_by_orderer.isPaymentComplete  = function() {
+    var cart = Orders.findOne({_id: this._id});
+    var status = cart.Status;
+
+    return status >= PAYMENT_COMPLETE ? 'checked': '';
+  }
+
   Template.users_shopping_cart.cart = function() {
     var user_id = Session.get('rounds_products_for_orderer');
     if (user_id != null) { 
-      var myOrders = Orders.find( {
+      var myOrders = Orders.findOne( {
         OrderRoundId: Session.get('admin_selected_order_round'),
         UserId: user_id
       });
@@ -579,19 +651,41 @@ if (Meteor.isClient) {
   Template.users_shopping_cart.products_price = function() {
     return getShoppingCartsTotal(this.UserId, Session.get('admin_selected_order_round'));
   }
- 
-  Template.users_shopping_cart_rows.count = function() {
-    var total = this.ProductPrice*this.ProductAmount*this.ProductPackageSize;
 
-    return roundToOneDecimal(total);
+  Template.users_shopping_cart.isReadyForDelivery = function() {
+    var cart = Orders.findOne({_id: this._id});
+    if (cart != null) {
+      var status = cart.Status;
+      if (status == null) {
+        return 'btn-primary';
+      }
+      else {
+        //console.log(deliveryStatus);
+        return status >= READY_FOR_DELIVERY? 'btn-success': 'btn-primary';
+      }
+    }
+  }
+
+  Template.users_shopping_cart.isDeliveryComplete = function() {
+    var cart = Orders.findOne({_id: this._id});
+    if (cart != null) {
+      var status = cart.Status;
+      return status >= DELIVERY_COMPLETE? 'btn-success': 'btn-primary';
+    }
+    return 'btn-primary';
+  }
+
+  Template.users_shopping_cart.isPaymentComplete = function() {
+    var cart = Orders.findOne({_id: this._id});
+    if (cart != null) {
+      var status = cart.Status;
+      return status >= PAYMENT_COMPLETE? 'btn-success': 'btn-primary';
+    }
+    return 'btn-primary';
   }
 
   Template.order_rounds.order_rounds = function() {
-    return OrderRounds.find({parent: null}, {sort: {Name: 1}});
-  }
-
-  Template.open_rounds.all_open_rounds = function() {
-    return OrderRounds.find({parent: null, Open: true});
+    return OrderRounds.find({parent: null}, {sort: {Name: -1}});
   }
 
   Template.products_for_round.producers = function() {
@@ -717,13 +811,7 @@ if (Meteor.isClient) {
         if (deadline != null) {
           var hours = deadline.getHours();
           var minutes = deadline.getMinutes();
-          if (hours < 10) {
-            hours = '0'+hours;
-          }
-          if (minutes < 10) {
-            minutes = '0'+minutes;
-          }
-          return hours+":"+minutes;
+          return formatTime(hours, minutes);
         }
       }
     }
@@ -883,7 +971,7 @@ if (Meteor.isClient) {
     }
   });
 
-  Template.shopping_cart_rows.events({
+  Template.shopping_cart_row.events({
     'blur .amount' : function(event, context) {
       var addedProductAmount = parseInt(context.find('input').value);
       if (addedProductAmount > 0) {
@@ -919,9 +1007,36 @@ if (Meteor.isClient) {
     }
   })
 
-  Template.users_shopping_cart_rows.events({
+  Template.users_shopping_cart.events({
+    'click .ready-for-delivery' : function() {
+      //TODO: lock the UI for users cart also from admin side.
+      setCartStatus(this._id, READY_FOR_DELIVERY);
+    },
+    'click .delivery-complete' : function() {
+      setCartStatus(this._id, DELIVERY_COMPLETE);
+    },
+    'click .payment-complete' : function() {
+      setCartStatus(this._id, PAYMENT_COMPLETE);
+    }
+  })
+
+  Template.users_shopping_cart_row.events({
     'click .remove-product' : function(event, context) {
       Meteor.call('removeFromCart', Session.get('admin_selected_order_round'), Session.get('rounds_products_for_orderer'), this.ProductId);
+    },
+    'blur .totalPrice' : function(event, context) {
+      var totalValue = parseInt(context.find('input').value);
+      console.log(this);
+      var amount = this.ProductAmount;
+      var price = this.ProductPrice;
+      var packageSize = this.ProductPackageSize;
+      //Changing the amount instead of price, as this is only dynamic place
+      //TODO: consider data model to change the actual price and have this visible for the producer.
+
+      var newAmount = totalValue / price / packageSize;
+      Meteor.call('updateCart', Session.get('admin_selected_order_round'), Session.get('rounds_products_for_orderer'), this.ProductId, '', '', false, this.ProductPackageSize, '', newAmount, false);
+    
+      //console.log("New amount: "+newAmount);
     }
   })
 
@@ -996,7 +1111,7 @@ if (Meteor.isClient) {
     }
   })
 
-  Template.open_rounds.events( {
+  Template.users_rounds.events( {
     'click .order_list_element' : function() {
       Session.set('user_selected_order_round', this._id);
     }
@@ -1139,7 +1254,7 @@ if (Meteor.isServer) {
       }
       //User has made at least one order, update shopping cart
       else {
-        var product = Orders.findOne({_id: shoppingCart._id, "Products.ProductId": addedProductId, 'Products.ProductPackageSize':addedPackageSize}, {"Products.$": 1});
+        var product = Orders.findOne({_id: shoppingCart._id, Products: {$elemMatch: {ProductId: addedProductId, ProductPackageSize:addedPackageSize}}});
         //If this product has been already added to cart
         if (product != null) 
         {
@@ -1149,8 +1264,12 @@ if (Meteor.isServer) {
             Orders.update(
             {
               _id: shoppingCart._id,
-              "Products.ProductId": addedProductId,
-              "Products.ProductPackageSize":addedPackageSize
+              Products: {
+                $elemMatch: {
+                  ProductPackageSize:addedPackageSize,
+                  ProductId: addedProductId
+                }
+              }
             },
             {$set: { "Products.$.ProductAmount" : amount }}
             );
@@ -1160,8 +1279,12 @@ if (Meteor.isServer) {
             Orders.update(
             {
               _id: shoppingCart._id,
-              "Products.ProductId": addedProductId,
-              "Products.ProductPackageSize":addedPackageSize
+              Products: {
+                $elemMatch: {
+                  ProductPackageSize:addedPackageSize,
+                  ProductId: addedProductId
+                }
+              }
             },
             {$inc: { "Products.$.ProductAmount" : 1 }}
             );
@@ -1219,7 +1342,10 @@ if (Meteor.isServer) {
         "ProductPackages._id": id
       }, 
       {$set: { "ProductPackages.$.Amount": value}});
-    }
+    },
+    /*findOrders: function (roundId, productId, packageSize) {
+      return Orders.find({OrderRoundId: roundId}, { Products: { $elemMatch: {ProductId: productId, ProductPackageSize: packageSize}}});
+    }*/ 
     /*productInCart: function(currentRoundId, currentUser, addedProductId) {
       console.log("user:  "+currentUser+ ", round: "+currentRoundId);
       var shoppingCart = Orders.findOne({
@@ -1247,10 +1373,10 @@ if (Meteor.isServer) {
       var openRoundDeadline = round.RoundDeadline;
       if (currentDateAndTime > openRoundDeadline)
       {
-        OrderRounds.update({_id : round._id}, {$set: {Open: false}});
+        OrderRounds.update({_id : round._id}, {$set: {Open: false, CanOpen: false}});
       }
     });
-  }, 30000)
+  }, 60000)
 
 
 
