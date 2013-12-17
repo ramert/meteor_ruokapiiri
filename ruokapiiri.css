@@ -72,6 +72,9 @@ div.span2 {
   max-width: 50%;                                                                                         
   max-height: 50%;                                                                                                                                                                        
 }
+.modal.fade {
+	top: -200px;
+}
 
 div.full {
 	width: 100%;
@@ -141,9 +144,6 @@ input.datepicker {
 input.timepicker {
 	margin-bottom: 0px !important;
 	width: 70px;
-}
-li.someProducts {
-	color: #0088CC;
 }
 
 html, body {

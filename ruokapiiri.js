@@ -630,7 +630,7 @@ if (Meteor.isClient) {
     return status >= DELIVERY_COMPLETE ? 'checked': '';
   }
 
-    Template.orders_by_orderer.isPaymentComplete  = function() {
+  Template.orders_by_orderer.isPaymentComplete  = function() {
     var cart = Orders.findOne({_id: this._id});
     var status = cart.Status;
 
@@ -656,14 +656,10 @@ if (Meteor.isClient) {
     var cart = Orders.findOne({_id: this._id});
     if (cart != null) {
       var status = cart.Status;
-      if (status == null) {
-        return 'btn-primary';
-      }
-      else {
-        //console.log(deliveryStatus);
-        return status >= READY_FOR_DELIVERY? 'btn-success': 'btn-primary';
-      }
+      return status >= READY_FOR_DELIVERY? 'btn-success': 'btn-primary';
     }
+
+    return 'btn-primary';
   }
 
   Template.users_shopping_cart.isDeliveryComplete = function() {
@@ -682,6 +678,13 @@ if (Meteor.isClient) {
       return status >= PAYMENT_COMPLETE? 'btn-success': 'btn-primary';
     }
     return 'btn-primary';
+  }
+
+  Template.users_shopping_cart.cartIsDelivered = function() {
+    var cart = Orders.findOne({_id: this._id});
+    var status = cart.Status;
+    console.log("Cart status: "+status>=DELIVERY_COMPLETE);
+    return status >= DELIVERY_COMPLETE;
   }
 
   Template.order_rounds.order_rounds = function() {
@@ -724,7 +727,7 @@ if (Meteor.isClient) {
     var roundProductsForProducer = OrderRounds.find({parent: Session.get('admin_selected_order_round'), ProducerId: this._id });
     if (roundProductsForProducer != null) {
       var amountInRound = roundProductsForProducer.count();
-      return amountInRound == 0 ? '':'someProducts';
+      return amountInRound == 0 ? '':'checked';
     }      
   }
 
@@ -734,7 +737,7 @@ if (Meteor.isClient) {
     if (roundProductsForCategory != null) {
       var amountInRound = roundProductsForCategory.count();
       //console.log("Count: "+amountInRound);
-      return amountInRound == 0 ? '':'someProducts';
+      return amountInRound == 0 ? '':'checked';
     }  
   }
 
@@ -1022,7 +1025,7 @@ if (Meteor.isClient) {
 
   Template.users_shopping_cart_row.events({
     'click .remove-product' : function(event, context) {
-      Meteor.call('removeFromCart', Session.get('admin_selected_order_round'), Session.get('rounds_products_for_orderer'), this.ProductId);
+      Meteor.call('removeFromCart', Session.get('admin_selected_order_round'), Session.get('rounds_products_for_orderer'), this.ProductId, this.ProductPackageSize);
     },
     'blur .totalPrice' : function(event, context) {
       var totalValue = parseInt(context.find('input').value);

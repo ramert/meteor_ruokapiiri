@@ -567,7 +567,8 @@
 			<h4>Tuottajat</h4>
 			<ul class="clickable unstyled">
 				{{#each producers}}
-				<li href="#" class="producer_list_element foodlist {{selectedProduct}} {{productChildrenSelected}}">
+				<li href="#" class="producer_list_element foodlist {{selectedProduct}}">
+					<input type="checkbox" class="mini" disabled {{productChildrenSelected}}></input>
 					{{Name}}
 				</li>
 				{{/each}}
@@ -577,7 +578,8 @@
 			<h4>Kategoriat</h4>
 			<ul class="clickable unstyled">
 				{{#each categories}}
-				<li href="#" class="category_list_element foodlist {{selectedCategory}} {{categoryChildrenSelected}}">
+				<li href="#" class="category_list_element foodlist {{selectedCategory}}">
+					<input type="checkbox" class="mini"  disabled {{categoryChildrenSelected}}></input>
 					{{Name}}
 				</li>
 				{{/each}}
@@ -694,6 +696,11 @@
 
 <template name="users_shopping_cart">
 	{{#with cart}}
+	  		<div>
+				<button type="button" class="ready-for-delivery space-right btn {{isReadyForDelivery}}">Jaeltu</button>
+				<button type="button" class="delivery-complete space-right btn {{isDeliveryComplete}}">Haettu</button>
+				<button type="button" class="payment-complete btn {{isPaymentComplete}}">Maksettu</button>
+  			</div>
 			<div class="table-responsive shopping-cart">
   				<table class="table">
   					<tr>
@@ -704,22 +711,24 @@
   						<th class="span1">Yhteensä</th>
   						<th> </th>
   					</tr>
-  					{{#each Products}}
-						{{> users_shopping_cart_row}}
-					{{/each}}
+  					{{#if cartIsDelivered}}
+  						{{#each Products}}
+  							{{> disabled_users_shopping_cart_row}}
+  						{{/each}}
+  					{{else}}
+  						{{#each Products}}
+							{{> users_shopping_cart_row}}
+						{{/each}}
+					{{/if}}
 					<tr>
 						<th></th>
   						<th></th>
   						<th></th>
+  						<th>Yhteensä</th>
+  						<th>{{products_price}}</th>
   						<th></th>
-  						<th colspan=2>Yhteensä {{products_price}}</th>
 					</tr>
 			  	</table>
-  			</div>
-  			<div>
-  				<button type="button" class="payment-complete float-right btn {{isPaymentComplete}}">Maksettu</button>
-				<button type="button" class="delivery-complete float-right space-right btn {{isDeliveryComplete}}">Haettu</button>
-				<button type="button" class="ready-for-delivery float-right space-right btn {{isReadyForDelivery}}">Jaeltu</button>
   			</div>
 	{{/with}}
 </template>
@@ -746,4 +755,15 @@
 	{{/with}}
 </template>
 
-
+<template name="disabled_users_shopping_cart_row">
+	{{#with this}}
+	<tr>
+		<td>{{ProductName}}</td>
+		<td>{{ProductPackageSize}} {{ProductUnit}}</td>
+		<td>{{ProductAmount}}</td>
+		<td>{{ProductPrice}} € / {{ProductUnit}}</td>
+		<td>{{countProductPrice this}} €</td>
+		<td></td>
+	</tr>
+	{{/with}}
+</template>
