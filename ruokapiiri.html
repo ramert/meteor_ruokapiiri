@@ -429,7 +429,7 @@
 			<span>{{Unit}}</span>
 		</td>
 		<td class="span1">
-			<button type="button" class="add_basket btn btn-primary">Lisää koriin</button>
+			<button type="button" class="add_basket btn btn-primary">Koriin</button>
 		</td>
 	</tr>
 	<tr class="desription">
@@ -644,6 +644,7 @@
   						<th class="span1">Määrä</th>
   						<th class="span1">Hinta</th>
   						<th class="span1">Yhteensä</th>
+  						<th></th>
   					</tr>
 					{{#each products}}
 						{{#each ProductPackages}}
@@ -654,6 +655,7 @@
   								<td>{{amount ../../ProductId}}</td>
   								<td>{{price ../../ProductId}} € / {{unit ../../ProductId}}</td>
   								<td>{{total ../../ProductId}} €</td>
+  								<td><button class="remove_product close">&times;</button></td>
 							</tr>
 							{{/if}}
 						{{/each}}

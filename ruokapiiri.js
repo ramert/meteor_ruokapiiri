@@ -72,7 +72,7 @@ if (Meteor.isClient) {
 
   Handlebars.registerHelper("isAdmin", function() {
    var user = Meteor.users.findOne({_id: Meteor.userId()});
-   if (user.role == 'admin')
+   if (user.profile.role == 'admin')
    {
     return true;
    }
@@ -1131,6 +1131,25 @@ if (Meteor.isClient) {
     }
   });
 
+  Template.orders_by_producer.events({
+    'click .remove_product' : function() {
+      var currentRoundId = Session.get('admin_selected_order_round');
+      var removedProductId = this.ParentId;
+      var packageSize = this.Amount;
+      var ordersForRound = Orders.find({OrderRoundId: currentRoundId, "Products.ProductId": removedProductId});
+      var userIds = [];
+      //TODO: this does not work!!!
+      ordersForRound.forEach(function(cart) {
+        userIds.push(cart.UserId);
+        //Meteor.call('removeFromCart', selectedRoundId, userId, productId, packageSize);
+      });
+
+      userIds.forEach(function(id){
+        Meteor.call("removeFromCart", currentRoundId, id, removedProductId, packageSize);
+      });
+    }
+  });
+
   Template.logInScreen.events ({
     'click .login' : function(event, context) {
       var emailAddress = context.find('input.userName').value;
@@ -1173,16 +1192,22 @@ if (Meteor.isServer) {
     //If need to clean stuff enable these...
     //OrderRounds.remove({});
     //Orders.remove({});
+    //Meteor.users.remove({});
+
+    if (Roles.getAllRoles().count() == 0) {
+      Roles.createRole('globalAdmin');
+    }
 
     //If no users defined, create admin
     if (Meteor.users.find({}).count() == 0)
     {
-        var options = {email: 'rami.ertimo@gmail.com', password: 'admin'};
+        console.log("creating admin user to empty DB");
+        var options = {email: 'rami.ertimo@gmail.com', password: 'admin', profile: {role: 'admin'}};
         Accounts.createUser(options);
     }
 
     Meteor.publish("producers", function() {
-      //TODO check for admin role.
+      //TODO check for role.
       return Producers.find({});
     });
 
@@ -1197,7 +1222,7 @@ if (Meteor.isServer) {
     Meteor.publish("orders", function() {
       var user = Meteor.users.findOne(this.userId);
       if (user) {
-        if (user.role == 'admin') {
+        if (user.profile.role == 'admin') {
           return Orders.find({});
         }
         else {
@@ -1212,7 +1237,7 @@ if (Meteor.isServer) {
 
     Meteor.publish("users", function () {
       var user= Meteor.users.findOne(this.userId);
-      if (user && user.role == 'admin') {
+      if (user && user.profile.role == 'admin') {
         return Meteor.users.find({});
       }
       else {
@@ -1317,6 +1342,8 @@ if (Meteor.isServer) {
         UserId: currentUser,
         OrderRoundId :currentRoundId
       });
+      console.log("Removing from: "+currentRoundId+", "+currentUser+", "+removedProductId+", "+packageSize);
+      console.log("Cart: "+shoppingCart._id);
       if (shoppingCart != null){
         Orders.update(
         {
@@ -1379,27 +1406,7 @@ if (Meteor.isServer) {
         OrderRounds.update({_id : round._id}, {$set: {Open: false, CanOpen: false}});
       }
     });
-  }, 60000)
-
-
-
-  //TODO: Example about role handling... 
-  /*Meteor.publish("extraUserData", function () {
-  var user = Meteor.users.findOne(this.userId);
-  var fields;
-
-  if (user && user.role === 'counselor')
-    fields = {pricePerSession: 1};
-  else if (user && user.role === 'student')
-    fields = {counselor: 1, sessionsRemaining: 1};
-
-  // even though we want one object, use `find` to return a *cursor*
-  return Meteor.users.find({_id: this.userId}, {fields: fields});
-});
-
-
-
-*/
+  }, 60000);
 
   Meteor.users.allow({
     update: function (userId, user) {     

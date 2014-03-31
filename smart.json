@@ -3,6 +3,7 @@
     "bootstrap-datepicker2": {},
     "bootstrap-timepicker": {},
     "bootstrap-datetimepicker": {},
-    "bootstrap-3-timepicker": {}
+    "bootstrap-3-timepicker": {},
+    "roles": {}
   }
 }
