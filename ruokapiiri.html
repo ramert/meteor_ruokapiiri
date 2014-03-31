@@ -10,7 +10,7 @@
 			<ul class="nav nav-tabs top-">
 				<li class="active"><a href="#order_tab" data-toggle="tab">Tilaa</a></li>
 				{{> admin_tab_bar}}
-				<li class="pull-right sign-in">{{loginButtons}}</li>
+				<li class="pull-right sign-in">{{> loginButtons}}</li>
 			</ul>
 			<div class="tab-content">
 				<div class="tab-pane active main" id="order_tab">
@@ -82,6 +82,7 @@
 				{{Name}}
 			</li>
 			{{/each}}
+		</ul>
 	</div>
 </template>
 
@@ -447,7 +448,7 @@
 	<div class="main span6">
 	{{#each users}}
 		<div>
-			<span class="span4">{{emails.0.address}}</span>
+			<span class="span4">{{emails.[0].address}}</span>
 			<!--<button type="button" class="allow_order btn btn-primary">Salli tilaukset</button>-->
 			<button type="button" class="allow_admin btn btn-warning">Salli hallinnointi</button>
 			<button class="remove_user close">&times;</button>
@@ -568,7 +569,7 @@
 			<ul class="clickable unstyled">
 				{{#each producers}}
 				<li href="#" class="producer_list_element foodlist {{selectedProduct}}">
-					<input type="checkbox" class="mini" disabled {{productChildrenSelected}}></input>
+					<input type="checkbox" class="mini" disabled {{productChildrenSelected}}>
 					{{Name}}
 				</li>
 				{{/each}}
@@ -579,7 +580,7 @@
 			<ul class="clickable unstyled">
 				{{#each categories}}
 				<li href="#" class="category_list_element foodlist {{selectedCategory}}">
-					<input type="checkbox" class="mini"  disabled {{categoryChildrenSelected}}></input>
+					<input type="checkbox" class="mini"  disabled {{categoryChildrenSelected}}>
 					{{Name}}
 				</li>
 				{{/each}}
@@ -623,7 +624,7 @@
 </template>
 
 <template name="orders_by_producer">
-	<div class"row_fluid"> 
+	<div class="row_fluid"> 
 		<div class="span2">
 			<div>
 				<ul class="clickable unstyled">
@@ -675,7 +676,7 @@
 </template>
 
 <template name="orders_by_orderer">
-	<div class"row_fluid"> 
+	<div class="row_fluid"> 
 		<div class="span3">
 			<div>
 				<ul class="clickable unstyled">
