@@ -523,7 +523,7 @@
 			{{#if roundIsOpen}}
 				<button type="button" class="close_round btn btn-primary">Sulje kierros</button>
 			{{else }}
-				<button type="button" class="open_round btn btn-success {{canOpen}}">Avaa kierros</button>	
+				<button {{canOpen}} type="button" class="open_round btn btn-success ">Avaa kierros</button>	
 			{{/if}}
 			<span>Kierros sulkeutuu</span>
 			<input class="datepicker" type="text" id="datepicker" data-date-format="dd.mm.yyyy" value="{{endDate}}"/>
